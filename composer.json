@@ -1,0 +1,63 @@
+{
+    "name": "codepulse/media-upload",
+    "description": "Secure-by-default file and image upload pipeline for Laravel.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "upload",
+        "image",
+        "security",
+        "watermark"
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-fileinfo": "*",
+        "intervention/image": "^3.11",
+        "laravel/framework": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "enshrined/svg-sanitize": "^1.1.1",
+        "league/flysystem-aws-s3-v3": "^3.0",
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "pestphp/pest": "^2.0|^3.0"
+    },
+    "suggest": {
+        "ext-imagick": "Needed for HEIC/AVIF and higher quality resampling.",
+        "ext-exif": "Needed for auto-orientation of JPEG images.",
+        "enshrined/svg-sanitize": "Required when svg.enabled is true.",
+        "league/flysystem-aws-s3-v3": "Required to store uploads on Amazon S3."
+    },
+    "autoload": {
+        "psr-4": {
+            "CodePulse\\MediaUpload\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CodePulse\\MediaUpload\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "CodePulse\\MediaUpload\\MediaUploadServiceProvider"
+            ],
+            "aliases": {
+                "MediaUpload": "CodePulse\\MediaUpload\\Facades\\MediaUpload"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "pest",
+        "test:s3": "bash tests/run-s3-tests.sh"
+    }
+}
