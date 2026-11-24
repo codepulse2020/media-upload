@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Thrown whenever an upload is refused. The reason code is stable and safe to
  * expose to clients; the message never contains file contents.
+ *
+ * @api
  */
 class RejectedUploadException extends RuntimeException
 {

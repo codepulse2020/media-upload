@@ -2,7 +2,7 @@
 
 namespace CodePulse\MediaUpload;
 
-use CodePulse\MediaUpload\Console\PruneQuarantineCommand;
+use CodePulse\MediaUpload\Console\PruneCommand;
 use CodePulse\MediaUpload\Contracts\VirusScanner;
 use CodePulse\MediaUpload\Handlers\PdfHandler;
 use CodePulse\MediaUpload\Handlers\SvgHandler;
@@ -19,6 +19,7 @@ use Illuminate\Routing\Middleware\ValidateSignature;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
+/** @internal */
 final class MediaUploadServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -48,6 +49,7 @@ final class MediaUploadServiceProvider extends ServiceProvider
             $config($app, 'mime_map', []),
             $config($app, 'serve.inline_mimes', []),
             (bool) $config($app, 'serve.cache', true),
+            (string) $config($app, 'public.directory', 'public'),
         ));
 
         $this->app->bind(SniffMimeType::class, fn (Application $app) => new SniffMimeType($app->make(MimeMap::class)));
@@ -77,6 +79,8 @@ final class MediaUploadServiceProvider extends ServiceProvider
             $app->make(ServePolicy::class),
             $app->bound('cache') ? $app['cache'] : null,
             $config($app, 'filename.generator', 'ulid'),
+            $config($app, 'public.cache_control'),
+            (int) $config($app, 'locks.wait', 10),
         ));
 
         $this->app->bind(SvgHandler::class, fn (Application $app) => new SvgHandler((bool) $config($app, 'svg.enabled', false)));
@@ -103,7 +107,7 @@ final class MediaUploadServiceProvider extends ServiceProvider
                 __DIR__.'/../config/media-upload.php' => config_path('media-upload.php'),
             ], 'media-upload-config');
 
-            $this->commands([PruneQuarantineCommand::class]);
+            $this->commands([PruneCommand::class]);
         }
 
         if (config('media-upload.serve.enabled', true)) {

@@ -14,6 +14,8 @@ use Intervention\Image\Interfaces\ImageInterface;
 /**
  * Decodes raster images and re-encodes them from pixels. Anything that is not
  * pixel data (polyglot payloads, EXIF/GPS, comments, trailing bytes) is lost.
+ *
+ * @api
  */
 final class ImageHandler implements FileHandler
 {

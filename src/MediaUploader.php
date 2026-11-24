@@ -7,7 +7,14 @@ use CodePulse\MediaUpload\Contracts\ImageTransformer;
 use CodePulse\MediaUpload\Contracts\Stage;
 use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
 use CodePulse\MediaUpload\Pipeline\HookRunner;
+use CodePulse\MediaUpload\Exceptions\InvalidUploadTokenException;
+use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse\MediaUpload\Support\DiskGuard;
 use CodePulse\MediaUpload\Support\FilenameSanitizer;
+use CodePulse\MediaUpload\Support\Locks;
+use CodePulse\MediaUpload\Support\MimeMap;
+use CodePulse\MediaUpload\Support\StorageWriter;
+use CodePulse\MediaUpload\Support\TokenSigner;
 use CodePulse\MediaUpload\Support\ServePolicy;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
@@ -16,6 +23,11 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\URL;
 use SplFileInfo;
 
+/**
+ * Entry point behind the MediaUpload facade.
+ *
+ * @api
+ */
 final class MediaUploader
 {
     /** @var array<string, list<mixed>> hooks registered with extend() */
@@ -78,6 +90,11 @@ final class MediaUploader
         $serve = $this->config('serve') ?? [];
         $policy = $this->container->make(ServePolicy::class);
 
+        // Public files get a permanent URL; pending ones are never public yet.
+        if ($file instanceof StoredFile ? ($file->isPublic() && ! $file->isPending()) : $this->isPublicPath($file)) {
+            return $this->publicUrl($file instanceof StoredFile ? $file->path : $file, $file instanceof StoredFile ? $file->disk : $disk);
+        }
+
         $path = $file instanceof StoredFile ? $file->path : $file;
         $disk ??= $file instanceof StoredFile ? $file->disk : ($this->config('disk') ?? 'local');
         $mime = $file instanceof StoredFile ? $file->mime : $policy->mimeForPath($path);
@@ -112,6 +129,126 @@ final class MediaUploader
         return URL::temporarySignedRoute($serve['name'] ?? 'media-upload.serve', $expires, $parameters);
     }
 
+    /** Read-only rules of a profile, e.g. to configure a form component. */
+    public function rules(?string $profile = null): UploadRules
+    {
+        $config = $this->config();
+
+        return UploadRules::fromProfile(
+            Profile::fromConfig($profile ?? ($config['default_profile'] ?? 'image'), $config),
+            $this->container->make(MimeMap::class),
+        );
+    }
+
+    /**
+     * Permanent URL of a file stored by a public profile: public.url (e.g. a
+     * CDN domain) + path, or the disk's own url() when public.url is empty.
+     */
+    public function publicUrl(string $path, ?string $disk = null): string
+    {
+        $disk ??= $this->config('public.disk') ?? $this->config('disk') ?? 'local';
+        $base = $this->config('public.url');
+
+        if (is_string($base) && $base !== '') {
+            return rtrim($base, '/').'/'.implode('/', array_map('rawurlencode', explode('/', ltrim($path, '/'))));
+        }
+
+        return $this->container->make('filesystem')->disk($disk)->url($path);
+    }
+
+    /** Signed reference to a stored file for two-step flows. */
+    public function token(StoredFile $file, ?int $ttlMinutes = null): string
+    {
+        $claims = $file->toArray();
+        unset($claims['meta']); // may be large and is not needed to resolve the file
+
+        return $this->signer()->sign(
+            ['file' => $claims],
+            60 * ($ttlMinutes ?? (int) ($this->config('tokens.ttl') ?? 1440)),
+        );
+    }
+
+    /**
+     * Resolves a token issued by token(). Checks the signature, expiry, profile,
+     * owner and that the file still exists. A pending file that has already
+     * been claimed resolves to its final location.
+     *
+     * When the upload had an owner, $owner must be given and match.
+     *
+     * @throws InvalidUploadTokenException
+     */
+    public function fromToken(string $token, ?string $profile = null, string|int|null $owner = null): StoredFile
+    {
+        $file = $this->verifiedFile($token, $profile, $owner);
+        $filesystem = $this->container->make('filesystem');
+
+        if ($filesystem->disk($file->disk)->exists($file->path)) {
+            return $file;
+        }
+
+        if ($file->isPending() && $filesystem->disk($file->pendingTarget['disk'])->exists($file->pendingTarget['path'])) {
+            return $this->claimedVersion($file);
+        }
+
+        throw new InvalidUploadTokenException(InvalidUploadTokenException::MISSING);
+    }
+
+    /**
+     * Moves a pending upload to its final location and returns the final file.
+     * Idempotent: claiming again returns the same final file.
+     *
+     * @throws InvalidUploadTokenException
+     * @throws RejectedUploadException path_conflict when the final location is taken
+     */
+    public function claim(string $token, ?string $profile = null, string|int|null $owner = null): StoredFile
+    {
+        $file = $this->verifiedFile($token, $profile, $owner);
+
+        if (! $file->isPending()) {
+            return $this->fromToken($token, $profile, $owner);
+        }
+
+        // Lock the final location, the same key StoreFile uses, so two pending
+        // uploads aimed at one hook-chosen name cannot both pass the existence
+        // check and overwrite each other.
+        return Locks::run(
+            $this->container->bound('cache') ? $this->container->make('cache') : null,
+            Locks::forTarget($file->pendingTarget['disk'], $file->pendingTarget['path']),
+            fn () => $this->moveToTarget($file),
+            (int) ($this->config('locks.wait') ?? 10),
+        );
+    }
+
+    /**
+     * Deletes a file stored by this package. Paths outside the package's own
+     * directories are refused, so user supplied paths cannot delete arbitrary
+     * objects. Content-addressed (hash) files may be shared: pass $force.
+     */
+    public function delete(StoredFile|string $file, ?string $disk = null, bool $force = false): bool
+    {
+        $path = ltrim($file instanceof StoredFile ? $file->path : $file, '/');
+        $disk ??= $file instanceof StoredFile ? $file->disk : ($this->isPublicPath($path)
+            ? ($this->config('public.disk') ?? $this->config('disk') ?? 'local')
+            : ($this->config('disk') ?? 'local'));
+
+        if (! in_array($disk, $this->managedDisks(), true)) {
+            throw new \InvalidArgumentException("Disk [{$disk}] is not used by media-upload.");
+        }
+
+        if ($path === '' || str_contains($path, '..') || str_contains($path, '\\') || ! $this->isManagedPath($path)) {
+            throw new \InvalidArgumentException("Path [{$path}] is not managed by media-upload.");
+        }
+
+        if (! $force && $this->config('filename.generator') === 'hash'
+            && preg_match('/^[0-9a-f]{64}$/', FilenameSanitizer::stem(basename($path)))) {
+            throw new \LogicException("[{$path}] is content-addressed and may be shared; pass force: true to delete it.");
+        }
+
+        $storage = $this->container->make('filesystem')->disk($disk);
+
+        return $storage->exists($path) && $storage->delete($path);
+    }
+
     public function processor(): UploadProcessor
     {
         return $this->container->make(UploadProcessor::class);
@@ -122,5 +259,155 @@ final class MediaUploader
         $config = (array) $this->repository->get('media-upload', []);
 
         return $key === null ? $config : data_get($config, $key);
+    }
+
+    private function verifiedFile(string $token, ?string $profile, string|int|null $owner): StoredFile
+    {
+        $claims = $this->signer()->verify($token);
+        $data = $claims['file'] ?? null;
+
+        if (! is_array($data)) {
+            throw new InvalidUploadTokenException(InvalidUploadTokenException::INVALID);
+        }
+
+        $file = StoredFile::fromArray($data);
+
+        if ($profile !== null && $file->profile !== $profile) {
+            throw new InvalidUploadTokenException(InvalidUploadTokenException::WRONG_PROFILE);
+        }
+
+        // Fail closed both ways: an owned upload needs the caller to name its
+        // owner, and a caller that names an owner never accepts an ownerless
+        // upload. Compared as strings: ids may be int here and string there.
+        if (($file->owner !== null || $owner !== null)
+            && ($file->owner === null || $owner === null || (string) $owner !== (string) $file->owner)) {
+            throw new InvalidUploadTokenException(InvalidUploadTokenException::WRONG_OWNER);
+        }
+
+        return $file;
+    }
+
+    private function claimedVersion(StoredFile $file): StoredFile
+    {
+        return $file->with([
+            'disk' => $file->pendingTarget['disk'],
+            'path' => $file->pendingTarget['path'],
+            'visibility' => $file->pendingTarget['visibility'],
+            'pending_target' => null,
+        ]);
+    }
+
+    private function moveToTarget(StoredFile $file): StoredFile
+    {
+        $filesystem = $this->container->make('filesystem');
+        $source = $filesystem->disk($file->disk);
+        $targetDisk = $filesystem->disk($file->pendingTarget['disk']);
+        $final = $this->claimedVersion($file);
+
+        if (! $source->exists($file->path)) {
+            if ($targetDisk->exists($final->path)) {
+                return $final; // already claimed
+            }
+
+            throw new InvalidUploadTokenException(InvalidUploadTokenException::MISSING);
+        }
+
+        if ($targetDisk->exists($final->path)) {
+            // Content-addressed target with identical bytes: reuse it.
+            if (FilenameSanitizer::stem(basename($final->path)) === $file->sha256) {
+                $source->delete($file->path);
+
+                return $final;
+            }
+
+            throw RejectedUploadException::because(RejectedUploadException::PATH_CONFLICT, 'A file with this name already exists.');
+        }
+
+        if (! $final->isPublic()) {
+            DiskGuard::assertPrivate($final->disk, (array) $this->repository->get('filesystems.disks', []));
+        }
+
+        // Always copy through StorageWriter (not a native move) so the final
+        // object gets its own metadata and no ACL on S3.
+        $policy = $this->container->make(ServePolicy::class);
+        $stream = $source->readStream($file->path);
+
+        try {
+            StorageWriter::write(
+                $targetDisk,
+                $final->path,
+                $stream,
+                $final->mime,
+                $policy->disposition(
+                    $final->mime,
+                    $policy->downloadName($final->originalName, $final->extension),
+                    $this->config("profiles.{$final->profile}.disposition"),
+                ),
+                $final->visibility,
+                $final->isPublic() ? $this->config('public.cache_control') : 'private, no-store',
+            );
+        } finally {
+            is_resource($stream) && fclose($stream);
+        }
+
+        $source->delete($file->path);
+
+        return $final;
+    }
+
+    private function isPublicPath(string $path): bool
+    {
+        $public = trim((string) ($this->config('public.directory') ?? 'public'), '/');
+        $path = ltrim($path, '/');
+
+        return $public !== '' && str_starts_with($path, $public.'/');
+    }
+
+    /** @return list<string> */
+    private function managedDisks(): array
+    {
+        $disks = [
+            $this->config('disk') ?? 'local',
+            $this->config('public.disk') ?? ($this->config('disk') ?? 'local'),
+            $this->config('queue.quarantine_disk') ?? 'local',
+        ];
+
+        foreach ((array) $this->config('profiles') as $profile) {
+            if (isset($profile['disk'])) {
+                $disks[] = $profile['disk'];
+            }
+        }
+
+        return array_values(array_unique($disks));
+    }
+
+    private function isManagedPath(string $path): bool
+    {
+        $config = $this->config();
+        $prefixes = array_merge(
+            [
+                trim((string) ($config['public']['directory'] ?? 'public'), '/'),
+                trim((string) ($config['pending']['directory'] ?? 'pending'), '/'),
+                trim((string) ($config['queue']['quarantine_dir'] ?? 'quarantine'), '/'),
+            ],
+            array_map(fn ($directory) => trim((string) $directory, '/'), (array) ($config['managed_directories'] ?? [])),
+        );
+
+        foreach (array_keys((array) ($config['profiles'] ?? [])) as $name) {
+            $prefixes[] = Profile::fromConfig($name, $config)->directory;
+        }
+
+        foreach (array_filter(array_unique($prefixes)) as $prefix) {
+            if (str_starts_with($path, $prefix.'/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function signer(): TokenSigner
+    {
+        return new TokenSigner((string) $this->repository->get('app.key', ''));
     }
 }

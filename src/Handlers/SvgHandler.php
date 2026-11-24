@@ -11,6 +11,8 @@ use enshrined\svgSanitize\Sanitizer;
 /**
  * SVG is XML that can carry scripts. Disabled unless svg.enabled is true, and
  * then always rewritten by enshrined/svg-sanitize.
+ *
+ * @api
  */
 final class SvgHandler implements FileHandler
 {

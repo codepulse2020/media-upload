@@ -25,6 +25,8 @@ use SplFileInfo;
  *
  *   validate → sniff → [validated] → decode → [transform] → encode → scan
  *   → [before_store] → store → [after_store]
+ *
+ * @internal
  */
 final class UploadProcessor
 {

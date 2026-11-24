@@ -12,6 +12,7 @@ use CodePulse\MediaUpload\UploadContext;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Pipeline\Pipeline;
 
+/** @internal */
 final class HookRunner
 {
     public const VALIDATED = 'validated';

@@ -24,6 +24,8 @@ use Symfony\Component\HttpFoundation\File\File;
  *
  * A retry after a successful store (e.g. an UploadStored listener threw)
  * re-delivers the event from the marker instead of storing another copy.
+ *
+ * @internal dispatched by UploadBuilder::storeAsync()
  */
 final class ProcessQuarantinedUpload implements ShouldQueue
 {
@@ -46,6 +48,8 @@ final class ProcessQuarantinedUpload implements ShouldQueue
         public readonly string $originalName,
         public readonly array $hooks,
         public readonly array $context,
+        public readonly string|int|null $owner = null,
+        public readonly bool $pending = false,
     ) {
     }
 
@@ -75,6 +79,8 @@ final class ProcessQuarantinedUpload implements ShouldQueue
             $processor = $uploader->processor();
             $profile = Profile::fromConfig($this->profile, $uploader->config());
             $ctx = $processor->makeContext($profile, new File($temp), $this->originalName, $this->context);
+            $ctx->setOwner($this->owner);
+            $ctx->setPending($this->pending);
 
             try {
                 $stored = $processor->run($ctx, $this->hooks);

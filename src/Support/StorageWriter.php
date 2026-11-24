@@ -15,16 +15,25 @@ use Illuminate\Filesystem\AwsS3V3Adapter;
  * default since 2023) may refuse; access is left to the bucket policy instead.
  * Content-Type / Content-Disposition are written as object metadata so the
  * object is safe even when fetched outside this package.
+ *
+ * @internal
  */
 final class StorageWriter
 {
     /**
      * @param  resource  $stream
      */
-    public static function write(Filesystem $disk, string $path, $stream, ?string $mime = null, ?string $disposition = null): void
-    {
+    public static function write(
+        Filesystem $disk,
+        string $path,
+        $stream,
+        ?string $mime = null,
+        ?string $disposition = null,
+        string $visibility = 'private',
+        ?string $cacheControl = null,
+    ): void {
         if (! $disk instanceof AwsS3V3Adapter) {
-            $written = $disk->writeStream($path, $stream, ['visibility' => 'private']);
+            $written = $disk->writeStream($path, $stream, ['visibility' => $visibility]);
 
             if ($written === false) {
                 throw new \RuntimeException("Unable to write [{$path}].");
@@ -33,9 +42,12 @@ final class StorageWriter
             return;
         }
 
+        // Public objects are exposed by the bucket policy / CDN for their prefix,
+        // not by an ACL, so no ACL is sent in either case.
         $options = array_filter([
             'ContentType' => $mime ?? 'application/octet-stream',
             'ContentDisposition' => $disposition,
+            'CacheControl' => $cacheControl,
         ]);
 
         $config = $disk->getConfig();

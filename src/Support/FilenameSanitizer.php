@@ -2,6 +2,7 @@
 
 namespace CodePulse\MediaUpload\Support;
 
+/** @internal */
 final class FilenameSanitizer
 {
     /**

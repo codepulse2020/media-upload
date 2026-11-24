@@ -6,6 +6,8 @@ use CodePulse\MediaUpload\UploadContext;
 
 /**
  * Type specific processing, chosen by the sniffed MIME type.
+ *
+ * @api
  */
 interface FileHandler
 {

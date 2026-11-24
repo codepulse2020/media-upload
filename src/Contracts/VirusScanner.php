@@ -4,6 +4,7 @@ namespace CodePulse\MediaUpload\Contracts;
 
 use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
 
+/** @api */
 interface VirusScanner
 {
     /**

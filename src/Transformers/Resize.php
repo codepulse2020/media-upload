@@ -6,7 +6,11 @@ use CodePulse\MediaUpload\Contracts\ImageTransformer;
 use CodePulse\MediaUpload\UploadContext;
 use Intervention\Image\Interfaces\ImageInterface;
 
-/** Shrinks the image to fit inside width x height, keeping aspect ratio. Never upscales. */
+/**
+ * Shrinks the image to fit inside width x height, keeping aspect ratio. Never upscales.
+ *
+ * @api
+ */
 final class Resize implements ImageTransformer
 {
     public function __construct(

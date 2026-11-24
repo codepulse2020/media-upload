@@ -54,6 +54,48 @@ $url = $file->url();            // 或 MediaUpload::url($path, disk: 'local')
 
 被拒絕時會丟出 `RejectedUploadException`，`$e->reason` 是固定的代碼（例如 `mime_not_allowed`、`image_too_large`），預設會被轉成 HTTP 422 回應。
 
+## 公開檔案
+
+```php
+'profiles' => ['product' => ['mimes' => ['image/jpeg', 'image/png', 'image/webp'], 'max_size' => 8192, 'visibility' => 'public']],
+```
+
+- **只開放給點陣圖**：public profile 只允許會被重新編碼的點陣圖。PDF、Office、SVG 一律私有，設定錯誤時啟動就會丟出例外。
+- **路徑與網址**：檔案放在 `public.directory`（預設 `public/`）之下，`$file->url()` 回傳永久網址，開頭是 `public.url`（例如 CDN 網域）或 disk 的 url。
+- **S3 寫入**：不送 ACL，是否公開交給 bucket policy 或 CloudFront，只需開放 `public/*`。物件會寫入 `Cache-Control: public, max-age=31536000, immutable`；私有物件則寫入 `private, no-store`。
+- **只存路徑的專案**：可用 `MediaUpload::publicUrl($path)` 組出網址。
+
+## 兩段式上傳：token 與認領
+
+```php
+// 1. 上傳 API：先放進待認領區，回傳 token 給前端
+$file = MediaUpload::profile('contact')->pending()->ownedBy($member->id)->store($request->file('file'));
+return ['token' => $file->token(), 'preview' => $file->url()];
+
+// 2. 送出表單：驗證 token，再認領到正式位置
+$request->validate(['attachments.*' => ['string', new UploadToken('contact', owner: fn () => $member->id)]]);
+$files = array_map(fn ($t) => MediaUpload::claim($t, 'contact', $member->id), $request->input('attachments'));
+```
+
+- **token 內容**：以 APP_KEY 派生的金鑰簽章，包含 disk、路徑、profile、上傳者與到期時間（`tokens.ttl`），無法改指其他路徑。
+- **擁有者檢查**：上傳時設了 `ownedBy()`，之後驗證就必須提供相同的 owner；驗證時指定了 owner，沒有擁有者的 token 也一律拒絕。owner 只是一個值，會員與管理員共用 ID 時請加上類型，例如 `ownedBy('member:'.$id)`。
+- **token 有簽章但沒有加密**：持有者看得到路徑、原始檔名與 owner，不要把敏感資料放進 owner。
+- **重複認領**：`claim()` 可以重複呼叫，會回傳同一個結果。認領前檔案一律放在私有 disk；未認領的檔案由 `media-upload:prune` 清除，正式站使用 S3 時建議改用 lifecycle rule 清除 `pending/`。
+- **不用待認領區**：一般上傳也能用 `$file->token()` 搭配 `MediaUpload::fromToken()`，取代「檢查路徑是否存在」的做法。
+
+## 其他 API
+
+- **`MediaUpload::rules('avatar')`**：回傳唯讀的 `UploadRules`（允許的類型、副檔名、大小與尺寸上限），可用來設定表單元件。
+- **`->storeFromStream($stream, $name)`、`->storeFromDisk($disk, $path)`**：讓串流或其他 disk 上的檔案經過同一套安全流程。遠端檔案（例如放在 S3 的 Livewire 暫存檔）會先複製到本機，超過大小上限就立即中止。
+- **`MediaUpload::delete($file)`**：只刪除套件管理的目錄（profile、公開、待認領、隔離區，以及 `managed_directories` 列出的目錄），任意路徑一律拒絕。hash 去重的檔案需要加上 `force: true`。
+
+> **`storeFromDisk()` 與 `delete()` 只接受伺服器決定的路徑。** 這兩個 API 會照傳入的路徑讀取或刪除。不要把請求參數直接傳進去，否則使用者可以把別人的私有檔重新存進公開 profile，或刪掉同目錄下別人的檔案。請傳入自己產生的路徑，或用 `MediaUpload::fromToken()` 從 token 換回 `StoredFile` 再操作。
+- **Office 文件**：xlsx、docx、pptx（xlsm 需 `office.allow_macros`）依 `[Content_Types].xml` 判定類型。zip bomb 檢查以實際解出的位元組計算，不採信檔案宣告的大小，所以每次上傳最多會解壓到 `office.max_uncompressed_size`（預設 100 MB）。需要 `ext-zip`。
+
+## 公開 API
+
+只有標示 `@api` 的類別保證相容（semver）：Facade、`MediaUploader`、`UploadBuilder`、`StoredFile`、`UploadRules`、`PendingUpload`、`UploadContext`、`Contracts\*`、`Exceptions\*`、`Events\*`、`Transformers\*`、`Rules\*`、`Handlers\*`、`Scanning\*`。標示 `@internal` 的類別隨時可能變動，請勿直接依賴。
+
 ## Hook
 
 ```php
@@ -85,7 +127,7 @@ $pending = MediaUpload::profile('image')->storeAsync($request->file('photo'));
 // 監聽 UploadStored / UploadRejected 事件，用 $event->id === $pending->id 對應
 ```
 
-送進 queue 之前會先同步做便宜的檢查，檔案先放進 quarantine 區再由 job 處理。queue 模式的 hook 必須可序列化（不接受 Closure）。殘留檔可用排程清除：`php artisan media-upload:prune-quarantine`。
+送進 queue 之前會先同步做便宜的檢查，檔案先放進 quarantine 區再由 job 處理。queue 模式的 hook 必須可序列化（不接受 Closure）。殘留檔可用排程清除：`php artisan media-upload:prune`。
 
 ## S3
 
@@ -125,7 +167,9 @@ Imagick 相關測試只在安裝了 `ext-imagick` 時執行（CI 會安裝），
 
 ## 已知限制
 
-- **PDF 檢查只是基本防護**：壓縮過的 object stream 可以藏住關鍵字。請一律以 attachment 方式提供，並搭配掃毒。
+- **PDF 檢查只是基本防護**：比對前會解開 `#xx` 跳脫，但壓縮過的 object stream 仍可能藏住關鍵字。請一律以 attachment 方式提供，並搭配掃毒。`/OpenAction` 本身不會被擋。
+- **`claim()` 不是不可分割的操作**：S3 上是先複製再刪除，中途失敗可能兩邊都留著一份，重新認領會回傳正式位置那份，殘留的待認領檔會被清除。
+- **不支援舊版 Office 格式**：`.xls`、`.doc` 和加密的 Office 文件都不支援。
 - **SVG 預設關閉**：啟用時需要安裝 `enshrined/svg-sanitize`。
 - **Emulator 不等於正式 S3**：AWS Emulator 不會檢查 bucket policy，正式環境的權限設定請另外驗證。
 - **動畫預設只保留第一格**：GIF/WebP 動畫只留第一格，可設定 `image.animation`。

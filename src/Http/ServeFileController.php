@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Serves stored files behind a signed URL with headers that stop MIME
  * sniffing, script execution and cross-site embedding. Works for any disk,
  * including S3 (the bytes are streamed through the application).
+ *
+ * @internal
  */
 final class ServeFileController
 {

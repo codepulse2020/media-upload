@@ -5,6 +5,8 @@ namespace CodePulse\MediaUpload\Support;
 /**
  * Counts animation frames by walking the container structure, without
  * decoding pixels, so frame bombs are refused before any decoder runs.
+ *
+ * @internal
  */
 final class FrameCounter
 {

@@ -54,8 +54,13 @@ return [
     | 必填的鍵為 mimes（允許的真實 MIME）與 max_size（單位 KB）。
     |
     | 選填的鍵有 disk、directory、disposition（inline 或 attachment）、
-    | image（覆寫下方的全域圖片設定）以及 hooks（插入業務邏輯）。未設定的
-    | 鍵會沿用全域設定。image.resize 的 mode 可為 cover 或 contain。
+    | image（覆寫下方的全域圖片設定）、office（覆寫 Office 設定）、
+    | visibility 以及 hooks（插入業務邏輯）。未設定的鍵會沿用全域設定。
+    | image.resize 的 mode 可為 cover 或 contain。
+    |
+    | visibility 預設為 private。設為 public 時檔案會放在下方 public 設定的
+    | 目錄並提供永久網址，但只允許會被重新編碼的點陣圖；PDF、Office、SVG
+    | 等原樣保存的類型一律私有，設定錯誤時啟動即丟出例外。
     |
     | 範例：在 hooks 中加入配額檢查、浮水印與縮圖產生
     |
@@ -93,6 +98,12 @@ return [
             'max_size' => 10 * 1024,
         ],
 
+        'public_image' => [
+            'mimes' => ['image/jpeg', 'image/png', 'image/webp'],
+            'max_size' => 10 * 1024,
+            'visibility' => 'public',
+        ],
+
         'document' => [
             'mimes' => ['application/pdf', 'text/plain'],
             'max_size' => 20 * 1024,
@@ -120,6 +131,10 @@ return [
         'image/avif' => Handlers\ImageHandler::class,
         'image/svg+xml' => Handlers\SvgHandler::class,
         'application/pdf' => Handlers\PdfHandler::class,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => Handlers\OfficeHandler::class,
+        'application/vnd.ms-excel.sheet.macroEnabled.12' => Handlers\OfficeHandler::class,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => Handlers\OfficeHandler::class,
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => Handlers\OfficeHandler::class,
         '*' => Handlers\PassthroughHandler::class,
     ],
 
@@ -141,6 +156,10 @@ return [
         'image/avif' => ['avif'],
         'image/svg+xml' => ['svg'],
         'application/pdf' => ['pdf'],
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => ['xlsx'],
+        'application/vnd.ms-excel.sheet.macroEnabled.12' => ['xlsm'],
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => ['docx'],
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => ['pptx'],
         'text/plain' => ['txt', 'csv'],
         'text/csv' => ['csv'],
     ],
@@ -211,16 +230,40 @@ return [
     | PDF
     |--------------------------------------------------------------------------
     |
-    | 含有下列關鍵字的 PDF 會被拒絕。這只是基本防護，壓縮過的 object stream
-    | 可能藏住關鍵字，請搭配掃毒，並以下載方式提供 PDF。
+    | 含有下列關鍵字的 PDF 會被拒絕，比對前會先解開 "#xx" 跳脫的寫法。
+    | 這只是基本防護，壓縮過的 object stream 可能藏住關鍵字，請搭配掃毒，
+    | 並以下載方式提供 PDF。
+    |
+    | /OpenAction 與 /AA 只是觸發點（常用於「開檔時顯示第一頁」），危險的
+    | 是它們指向的 /JavaScript 或 /Launch，因此預設不列入，避免誤擋報表。
     |
     */
 
     'pdf' => [
         'blocked_keywords' => [
             '/JavaScript', '/JS', '/Launch', '/EmbeddedFile',
-            '/OpenAction', '/AA', '/RichMedia', '/XFA',
+            '/RichMedia', '/XFA',
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Office 文件
+    |--------------------------------------------------------------------------
+    |
+    | xlsx、xlsm、docx、pptx 依壓縮檔內的 [Content_Types].xml 判定真實類型，
+    | 不依賴 libmagic 的判斷。以 max_entries 與 max_uncompressed_size
+    | （位元組）擋下 zip bomb：解壓大小以實際解出的位元組計算，不採信檔案
+    | 宣告的大小，因此每次上傳最多會解壓到這個上限。含巨集的文件預設拒絕，
+    | 需要時在 profile 的 office 中設定 allow_macros。需要 zip 擴充套件。
+    | 舊版 .xls、.doc 與加密的文件不支援。
+    |
+    */
+
+    'office' => [
+        'allow_macros' => false,
+        'max_entries' => 10_000,
+        'max_uncompressed_size' => 100 * 1024 * 1024,
     ],
 
     /*
@@ -280,8 +323,8 @@ return [
     |
     | 使用 storeAsync() 時，檔案會先通過基本檢查並放入隔離區（quarantine），
     | 再由 queue job 完成處理，結果透過 UploadStored 或 UploadRejected 事件
-    | 通知。quarantine_ttl 單位為分鐘，供 media-upload:prune-quarantine
-    | 指令清除殘留檔案使用。
+    | 通知。quarantine_ttl 單位為分鐘，供 media-upload:prune 指令清除殘留
+    | 檔案使用。
     |
     */
 
@@ -347,6 +390,87 @@ return [
     'filename' => [
         'generator' => 'ulid',
         'max_original_length' => 200,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 公開檔案
+    |--------------------------------------------------------------------------
+    |
+    | visibility 為 public 的 profile 會寫入 disk（未設定時沿用上方的 disk）
+    | 的 directory 目錄下，讓 bucket policy 或 CDN 只需開放這一個前綴。S3 上
+    | 不送 ACL，是否公開由 bucket policy 或 CloudFront 決定。
+    |
+    | url 為公開網址的開頭，例如 CDN 網域；未設定時使用 disk 本身的 url()。
+    | 檔名不會重複，因此 cache_control 預設為長期快取。
+    |
+    */
+
+    'public' => [
+        'disk' => env('MEDIA_UPLOAD_PUBLIC_DISK'),
+        'directory' => 'public',
+        'url' => env('MEDIA_UPLOAD_PUBLIC_URL'),
+        'cache_control' => 'public, max-age=31536000, immutable',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 待認領上傳
+    |--------------------------------------------------------------------------
+    |
+    | 兩段式流程使用 ->pending() 上傳時，檔案先放在私有 disk 的 directory
+    | 下，取得 token 後再以 MediaUpload::claim() 搬到正式位置。超過 ttl
+    | （分鐘）仍未認領的檔案由 media-upload:prune 清除；正式站使用 S3 時，
+    | 建議改用 lifecycle rule 清除這個前綴。
+    |
+    */
+
+    'pending' => [
+        'directory' => 'pending',
+        'ttl' => 60 * 24,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 上傳 Token
+    |--------------------------------------------------------------------------
+    |
+    | StoredFile::token() 產生以 APP_KEY 派生金鑰簽章的 token，內容包含
+    | disk、路徑、profile、上傳者與到期時間。ttl 單位為分鐘，需涵蓋使用者
+    | 從上傳到送出表單的時間。
+    |
+    */
+
+    'tokens' => [
+        'ttl' => 60 * 24,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 可刪除的目錄
+    |--------------------------------------------------------------------------
+    |
+    | MediaUpload::delete() 只會刪除套件管理的目錄（各 profile 目錄、公開、
+    | 待認領與隔離區目錄）。若 before_store hook 把檔案放到其他目錄，需要
+    | 列在這裡才能刪除。
+    |
+    */
+
+    'managed_directories' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | 鎖定
+    |--------------------------------------------------------------------------
+    |
+    | 檔名可預期時（hash 產生器、hook 指定的檔名、claim 的目標），寫入前
+    | 會以 cache lock 鎖住最終位置，避免同時寫入互相覆蓋。wait 為等待鎖的
+    | 秒數，需要支援 lock 的 cache store（redis、database、file 等）。
+    |
+    */
+
+    'locks' => [
+        'wait' => 10,
     ],
 
 ];

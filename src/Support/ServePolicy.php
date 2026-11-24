@@ -8,6 +8,8 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
  * Decides how a stored file is presented to browsers. Shared by the proxy
  * route, presigned URLs and the object metadata written to S3, so every path
  * answers with the same Content-Type, Content-Disposition and file name.
+ *
+ * @internal
  */
 final class ServePolicy
 {
@@ -29,7 +31,14 @@ final class ServePolicy
         private readonly array $mimeMap,
         private readonly array $inlineMimes,
         private readonly bool $cache = true,
+        private readonly string $publicDirectory = 'public',
     ) {
+    }
+
+    /** Prefix that holds every public profile's files. */
+    public function publicDirectory(): string
+    {
+        return trim($this->publicDirectory, '/');
     }
 
     /** MIME type from the extension we chose when storing; unknown => opaque bytes. */

@@ -10,6 +10,8 @@ use Illuminate\Http\UploadedFile;
 
 /**
  * Cheap checks that only look at metadata: upload status, size and name.
+ *
+ * @internal
  */
 final class ValidateUpload
 {

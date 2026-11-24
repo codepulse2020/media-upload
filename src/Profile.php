@@ -8,6 +8,8 @@ use CodePulse\MediaUpload\Support\MimeMap;
 
 /**
  * An immutable, fully resolved set of upload rules.
+ *
+ * @internal use MediaUpload::rules() for a stable, read-only view.
  */
 final class Profile
 {
@@ -25,7 +27,16 @@ final class Profile
         public readonly array $image,
         public readonly string $disposition,
         public readonly array $hooks,
+        public readonly string $visibility = 'private',
+        public readonly array $office = [],
+        public readonly string $pendingDisk = 'local',
+        public readonly string $pendingDirectory = 'pending',
     ) {
+    }
+
+    public function isPublic(): bool
+    {
+        return $this->visibility === 'public';
     }
 
     /** @param array<string, mixed> $config the whole media-upload config */
@@ -63,12 +74,34 @@ final class Profile
             throw new InvalidConfigException("Profile [{$name}] disposition must be inline or attachment.");
         }
 
+        $visibility = $profile['visibility'] ?? 'private';
+
+        if (! in_array($visibility, ['public', 'private'], true)) {
+            throw new InvalidConfigException("Profile [{$name}] visibility must be public or private.");
+        }
+
+        $directory = trim($profile['directory'] ?? ($config['directory'] ?? 'uploads').'/'.$name, '/');
+        $publicDirectory = trim((string) ($config['public']['directory'] ?? 'public'), '/');
+
+        if ($visibility === 'public') {
+            self::assertPublicSafe($name, $mimes, $config);
+            $disk = $profile['disk'] ?? $config['public']['disk'] ?? $config['disk'] ?? 'local';
+            $directory = trim($publicDirectory.'/'.$directory, '/');
+        } else {
+            $disk = $profile['disk'] ?? $config['disk'] ?? 'local';
+
+            // Keep private files out of the prefix a bucket policy / CDN exposes.
+            if ($publicDirectory !== '' && ($directory === $publicDirectory || str_starts_with($directory, $publicDirectory.'/'))) {
+                throw new InvalidConfigException("Private profile [{$name}] may not use the public directory [{$publicDirectory}].");
+            }
+        }
+
         return new self(
             name: $name,
             mimes: $mimes,
             maxSizeKb: $maxSize,
-            disk: $profile['disk'] ?? $config['disk'] ?? 'local',
-            directory: trim($profile['directory'] ?? ($config['directory'] ?? 'uploads').'/'.$name, '/'),
+            disk: $disk,
+            directory: $directory,
             image: array_replace(
                 [
                     'max_pixels' => 40_000_000,
@@ -81,9 +114,39 @@ final class Profile
                 $config['image'] ?? [],
                 $profile['image'] ?? [],
             ),
-            disposition: $disposition,
+            disposition: $visibility === 'public' ? 'inline' : $disposition,
             hooks: self::mergeHooks($config['hooks'] ?? [], $profile['hooks'] ?? [], $name),
+            visibility: $visibility,
+            office: array_replace(
+                ['allow_macros' => false, 'max_entries' => 10_000, 'max_uncompressed_size' => 100 * 1024 * 1024],
+                $config['office'] ?? [],
+                $profile['office'] ?? [],
+            ),
+            // Pending uploads always wait on the private disk, even for public profiles.
+            pendingDisk: $config['disk'] ?? 'local',
+            pendingDirectory: trim(($config['pending']['directory'] ?? 'pending').'/'.$name, '/'),
         );
+    }
+
+    /**
+     * Public files are reachable without a signature, so only types that are
+     * decoded and re-encoded from pixels may be public. Anything stored as-is
+     * (PDF, Office, SVG, passthrough) stays private.
+     *
+     * @param  list<string>  $mimes
+     * @param  array<string, mixed>  $config
+     */
+    private static function assertPublicSafe(string $name, array $mimes, array $config): void
+    {
+        foreach ($mimes as $mime) {
+            $handler = $config['handlers'][$mime] ?? $config['handlers']['*'] ?? null;
+
+            if (! is_string($handler) || ! is_a($handler, Handlers\ImageHandler::class, true)) {
+                throw new InvalidConfigException(
+                    "Profile [{$name}] is public but [{$mime}] is not re-encoded by ImageHandler. Only raster images may be public."
+                );
+            }
+        }
     }
 
     public function maxBytes(): int

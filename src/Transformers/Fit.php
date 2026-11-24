@@ -6,7 +6,11 @@ use CodePulse\MediaUpload\Contracts\ImageTransformer;
 use CodePulse\MediaUpload\UploadContext;
 use Intervention\Image\Interfaces\ImageInterface;
 
-/** Crops and resizes to exactly width x height (CSS object-fit: cover). */
+/**
+ * Crops and resizes to exactly width x height (CSS object-fit: cover).
+ *
+ * @api
+ */
 final class Fit implements ImageTransformer
 {
     public function __construct(

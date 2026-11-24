@@ -8,6 +8,8 @@ use CodePulse\MediaUpload\UploadContext;
 /**
  * Stores whitelisted, non-transformable types as they are. Such files are
  * always served as attachments (see serve.inline_mimes).
+ *
+ * @api
  */
 final class PassthroughHandler implements FileHandler
 {

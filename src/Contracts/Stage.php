@@ -9,6 +9,8 @@ use CodePulse\MediaUpload\UploadContext;
  * A business hook. Works like Laravel middleware: call $next($ctx) to continue.
  * Not calling $next rejects the upload; throw RejectedUploadException to reject
  * with your own message.
+ *
+ * @api
  */
 interface Stage
 {

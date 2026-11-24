@@ -5,6 +5,7 @@ namespace CodePulse\MediaUpload\Events;
 use CodePulse\MediaUpload\StoredFile;
 use Illuminate\Foundation\Events\Dispatchable;
 
+/** @api */
 final class UploadStored
 {
     use Dispatchable;

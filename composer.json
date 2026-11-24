@@ -26,7 +26,8 @@
         "ext-imagick": "Needed for HEIC/AVIF and higher quality resampling.",
         "ext-exif": "Needed for auto-orientation of JPEG images.",
         "enshrined/svg-sanitize": "Required when svg.enabled is true.",
-        "league/flysystem-aws-s3-v3": "Required to store uploads on Amazon S3."
+        "league/flysystem-aws-s3-v3": "Required to store uploads on Amazon S3.",
+        "ext-zip": "Needed for Office (xlsx, docx, pptx) uploads."
     },
     "autoload": {
         "psr-4": {

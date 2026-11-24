@@ -15,6 +15,8 @@ use Illuminate\Contracts\Container\Container;
  *  - [class-string, array $params]     [Watermark::class, ['path' => '...']]
  *  - Stage / ImageTransformer instance new Watermark(text: 'ACME')
  *  - Closure (sync uploads only)       fn (UploadContext $ctx, Closure $next) => $next($ctx)
+ *
+ * @internal
  */
 final class HookResolver
 {

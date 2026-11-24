@@ -8,6 +8,7 @@ use CodePulse\MediaUpload\Exceptions\ScanLimitExceededException;
 use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
 use CodePulse\MediaUpload\UploadContext;
 
+/** @internal */
 final class ScanVirus
 {
     public function __construct(

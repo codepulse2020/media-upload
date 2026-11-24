@@ -10,6 +10,8 @@ use SplFileInfo;
  * change: image (transform), directory / filename (before_store) and meta.
  * The security relevant parts (sniffed MIME, output bytes) can only be set by
  * the core pipeline; tampering with them is detected and rejected.
+ *
+ * @api
  */
 final class UploadContext
 {
@@ -39,6 +41,10 @@ final class UploadContext
     private ?StoredFile $stored = null;
 
     private bool $created = false;
+
+    private bool $pending = false;
+
+    private string|int|null $owner = null;
 
     /**
      * @param  string  $originalName  sanitised and length-limited, for display / StoredFile
@@ -192,6 +198,30 @@ final class UploadContext
     {
         $this->stored = $stored;
         $this->created = $created;
+    }
+
+    /** True when the upload goes to the pending area and must be claim()ed. */
+    public function isPending(): bool
+    {
+        return $this->pending;
+    }
+
+    /** Who uploaded the file (set with UploadBuilder::ownedBy()). */
+    public function owner(): string|int|null
+    {
+        return $this->owner;
+    }
+
+    /** @internal */
+    public function setOwner(string|int|null $owner): void
+    {
+        $this->owner = $owner;
+    }
+
+    /** @internal */
+    public function setPending(bool $pending): void
+    {
+        $this->pending = $pending;
     }
 
     /** @internal */

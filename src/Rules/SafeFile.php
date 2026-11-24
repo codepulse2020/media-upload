@@ -13,6 +13,8 @@ use Illuminate\Http\UploadedFile;
  * Decoding / re-encoding / scanning still happen when you call store().
  *
  *   'photo' => ['required', new SafeFile('avatar')],
+ *
+ * @api
  */
 final class SafeFile implements ValidationRule
 {

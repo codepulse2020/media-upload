@@ -2,6 +2,7 @@
 
 namespace CodePulse\MediaUpload\Support;
 
+/** @internal */
 final class MimeMap
 {
     /** @param array<string, list<string>> $map */

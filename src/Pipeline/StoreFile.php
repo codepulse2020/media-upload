@@ -6,15 +6,15 @@ use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
 use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
 use CodePulse\MediaUpload\StoredFile;
 use CodePulse\MediaUpload\Support\DiskGuard;
+use CodePulse\MediaUpload\Support\Locks;
 use CodePulse\MediaUpload\Support\ServePolicy;
 use CodePulse\MediaUpload\Support\StorageWriter;
 use CodePulse\MediaUpload\UploadContext;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
-use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
-use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
+/** @internal */
 final class StoreFile
 {
     /** @param array<string, mixed> $diskConfigs config('filesystems.disks') */
@@ -24,32 +24,68 @@ final class StoreFile
         private readonly ServePolicy $serve,
         private readonly ?CacheFactory $cache = null,
         private readonly string $generator = 'ulid',
+        private readonly ?string $publicCacheControl = null,
+        private readonly int $lockWait = 10,
     ) {
     }
 
     public function __invoke(UploadContext $ctx): StoredFile
     {
-        $diskName = $ctx->profile->disk;
-        DiskGuard::assertPrivate($diskName, $this->diskConfigs);
+        $profile = $ctx->profile;
 
-        $directory = $this->directory($ctx);
+        if (! $profile->isPublic()) {
+            DiskGuard::assertPrivate($profile->disk, $this->diskConfigs);
+        }
+
         $hookChoseName = $ctx->filename !== null;
-        $filename = $this->filename($ctx);
         $extension = (string) $ctx->outputExtension();
-        $path = ltrim($directory.'/'.$filename.'.'.$extension, '/');
-        $disk = $this->filesystem->disk($diskName);
+        $target = ltrim($this->directory($ctx).'/'.$this->filename($ctx).'.'.$extension, '/');
+        $dedupe = ! $hookChoseName && $this->generator === 'hash';
+
+        if ($ctx->isPending()) {
+            return $this->storePending($ctx, $target, $extension, $dedupe);
+        }
 
         // Random ids cannot collide; deterministic names (content hash or a
         // hook supplied name) are written under a lock so concurrent uploads
         // cannot both pass the existence check and overwrite each other.
-        $deterministic = $hookChoseName || $this->generator === 'hash';
-        $write = fn () => $this->write($ctx, $disk, $diskName, $path, $extension, dedupe: ! $hookChoseName && $this->generator === 'hash');
+        $write = fn () => $this->write($ctx, $profile->disk, $target, $extension, $dedupe, $profile->visibility);
 
-        return $deterministic ? $this->locked($diskName.':'.$path, $write) : $write();
+        return $hookChoseName || $dedupe
+            ? Locks::run($this->cache, Locks::forTarget($profile->disk, $target), $write, $this->lockWait)
+            : $write();
     }
 
-    private function write(UploadContext $ctx, Filesystem $disk, string $diskName, string $path, string $extension, bool $dedupe): StoredFile
+    /**
+     * Pending uploads always wait on the private disk under a random name; the
+     * final location is decided now and applied by claim().
+     */
+    private function storePending(UploadContext $ctx, string $target, string $extension, bool $dedupe): StoredFile
     {
+        $profile = $ctx->profile;
+        DiskGuard::assertPrivate($profile->pendingDisk, $this->diskConfigs);
+
+        if (! $dedupe && $ctx->filename !== null && $this->filesystem->disk($profile->disk)->exists($target)) {
+            throw Rejected::because(Rejected::PATH_CONFLICT, 'A file with this name already exists.');
+        }
+
+        $path = $profile->pendingDirectory.'/'.strtolower((string) Str::ulid()).'.'.$extension;
+        $stored = $this->write($ctx, $profile->pendingDisk, $path, $extension, false, 'private');
+
+        $stored = $stored->with(['pending_target' => [
+            'disk' => $profile->disk,
+            'path' => $target,
+            'visibility' => $profile->visibility,
+        ]]);
+
+        $ctx->setStored($stored, true);
+
+        return $stored;
+    }
+
+    private function write(UploadContext $ctx, string $diskName, string $path, string $extension, bool $dedupe, string $visibility): StoredFile
+    {
+        $disk = $this->filesystem->disk($diskName);
         $mime = (string) $ctx->outputMime();
         $created = true;
 
@@ -74,6 +110,8 @@ final class StoreFile
                         $this->serve->downloadName($ctx->originalName, $extension),
                         $ctx->profile->disposition,
                     ),
+                    $visibility,
+                    $visibility === 'public' ? $this->publicCacheControl : 'private, no-store',
                 );
             } finally {
                 if (is_resource($stream)) {
@@ -94,28 +132,13 @@ final class StoreFile
             width: $ctx->width(),
             height: $ctx->height(),
             meta: $ctx->meta,
+            visibility: $visibility,
+            owner: $ctx->owner(),
         );
 
         $ctx->setStored($stored, $created);
 
         return $stored;
-    }
-
-    /**
-     * @template T
-     *
-     * @param  callable(): T  $callback
-     * @return T
-     */
-    private function locked(string $key, callable $callback): mixed
-    {
-        $store = $this->cache?->store();
-
-        if ($store === null || ! $store->getStore() instanceof LockProvider) {
-            return $callback();
-        }
-
-        return $store->getStore()->lock('media-upload:'.sha1($key), 30)->block(10, $callback);
     }
 
     private function directory(UploadContext $ctx): string
@@ -130,7 +153,20 @@ final class StoreFile
             }
         }
 
+        // Hooks cannot move a public upload out of the public prefix, or a private one into it.
+        if ($ctx->directory !== null && ! $this->insideProfileArea($ctx, $directory)) {
+            throw new InvalidConfigException("Directory [{$directory}] is outside the area allowed for profile [{$ctx->profile->name}].");
+        }
+
         return $directory;
+    }
+
+    private function insideProfileArea(UploadContext $ctx, string $directory): bool
+    {
+        $public = $this->serve->publicDirectory();
+        $inPublic = $public !== '' && ($directory === $public || str_starts_with($directory, $public.'/'));
+
+        return $ctx->profile->isPublic() ? $inPublic : ! $inPublic;
     }
 
     private function filename(UploadContext $ctx): string

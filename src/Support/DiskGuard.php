@@ -4,6 +4,7 @@ namespace CodePulse\MediaUpload\Support;
 
 use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
 
+/** @internal */
 final class DiskGuard
 {
     /** Canned ACLs that make an S3 object readable without a signature. */

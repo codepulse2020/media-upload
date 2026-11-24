@@ -6,6 +6,7 @@ use CodePulse\MediaUpload\Facades\MediaUpload;
 use CodePulse\MediaUpload\MediaUploader;
 use CodePulse\MediaUpload\Jobs\ProcessQuarantinedUpload;
 use CodePulse\MediaUpload\Tests\Fixtures;
+use CodePulse\MediaUpload\Tests\RemoteUploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -84,7 +85,8 @@ it('stores images on a bucket without ACLs', function () {
 
     $head = s3Head($this->bucket, $stored->path);
     expect($head['ContentType'])->toBe('image/jpeg')
-        ->and($head['ContentDisposition'])->toStartWith('inline');
+        ->and($head['ContentDisposition'])->toStartWith('inline')
+        ->and($head['CacheControl'])->toBe('private, no-store');
 });
 
 it('stores non images as attachments', function () {
@@ -165,4 +167,48 @@ it('quarantines on S3 and finishes on the queue', function () {
     expect($files)->toHaveCount(1)
         ->and($files[0])->toStartWith('uploads/image/')
         ->and(array_filter($this->acl))->toBe([]);
+});
+
+it('writes public profiles to S3 without ACLs and with long-lived caching', function () {
+    config()->set('media-upload.public.url', 'https://cdn.example.com');
+
+    $stored = MediaUpload::profile('public_image')->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+    $head = s3Head($this->bucket, $stored->path);
+
+    expect($stored->path)->toStartWith('public/')
+        ->and($this->acl)->toBe([$stored->path => ''])
+        ->and($head['CacheControl'])->toBe('public, max-age=31536000, immutable')
+        ->and($head['ContentType'])->toBe('image/jpeg')
+        ->and($stored->url())->toBe('https://cdn.example.com/'.$stored->path);
+});
+
+it('claims pending uploads from the private area into the public prefix on S3', function () {
+    $pending = MediaUpload::profile('public_image')->pending()->ownedBy(3)->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+    expect($pending->path)->toStartWith('pending/');
+
+    $final = MediaUpload::claim($pending->token(), 'public_image', 3);
+
+    expect(Storage::disk('s3')->exists($final->path))->toBeTrue()
+        ->and(Storage::disk('s3')->exists($pending->path))->toBeFalse()
+        ->and(s3Head($this->bucket, $final->path)['CacheControl'])->toBe('public, max-age=31536000, immutable')
+        ->and(array_filter($this->acl))->toBe([]);
+});
+
+it('stores remote temporary uploads that live on S3', function () {
+    Storage::disk('s3')->put('livewire-tmp/abc', Fixtures::jpegWithExif('SECRET-GPS'));
+
+    $stored = MediaUpload::store(new RemoteUploadedFile('s3', 'livewire-tmp/abc', 'remote.jpg'));
+
+    expect(Storage::disk('s3')->get($stored->path))->not->toContain('SECRET-GPS')
+        ->and($stored->originalName)->toBe('remote.jpg');
+});
+
+it('deletes managed objects on S3 only', function () {
+    $stored = MediaUpload::store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+    Storage::disk('s3')->put('imports/secret.csv', 'x');
+
+    expect(MediaUpload::delete($stored))->toBeTrue()
+        ->and(Storage::disk('s3')->exists($stored->path))->toBeFalse()
+        ->and(fn () => MediaUpload::delete('imports/secret.csv', 's3'))->toThrow(InvalidArgumentException::class)
+        ->and(Storage::disk('s3')->exists('imports/secret.csv'))->toBeTrue();
 });

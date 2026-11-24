@@ -4,6 +4,7 @@ namespace CodePulse\MediaUpload\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 
+/** @api */
 final class UploadRejected
 {
     use Dispatchable;

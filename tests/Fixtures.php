@@ -187,4 +187,99 @@ final class Fixtures
     {
         return "\xB4\xFA\xB8\xD5.".$extension;
     }
+
+    /**
+     * Minimal Office Open XML file.
+     *
+     * @param  string  $type  xlsx | xlsm | docx | pptx
+     * @param  array<string, string>  $extra  additional zip entries
+     * @param  bool  $contentTypesLast  write [Content_Types].xml last (some generators do); libmagic then only reports "application/zip"
+     */
+    public static function ooxml(string $type = 'xlsx', array $extra = [], bool $contentTypesLast = false, ?string $contentTypes = null): string
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            test()->markTestSkipped('ext-zip is not installed.');
+        }
+
+        [$part, $main] = [
+            'xlsx' => ['/xl/workbook.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'],
+            'xlsm' => ['/xl/workbook.xml', 'application/vnd.ms-excel.sheet.macroEnabled.main+xml'],
+            'docx' => ['/word/document.xml', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'],
+            'pptx' => ['/ppt/presentation.xml', 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml'],
+        ][$type];
+
+        $contentTypes ??= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            .'<Default Extension="xml" ContentType="application/xml"/>'
+            .'<Override PartName="'.$part.'" ContentType="'.$main.'"/>'
+            .'</Types>';
+
+        $path = self::$dir.'/'.bin2hex(random_bytes(6)).'.zip';
+        $zip = new \ZipArchive();
+        $zip->open($path, \ZipArchive::CREATE);
+
+        if (! $contentTypesLast) {
+            $zip->addFromString('[Content_Types].xml', $contentTypes);
+        } else {
+            $zip->addFromString('docProps/app.xml', '<?xml version="1.0"?><root/>');
+        }
+
+        $zip->addFromString(ltrim($part, '/'), '<?xml version="1.0"?><root/>');
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>');
+
+        if ($contentTypesLast) {
+            $zip->addFromString('[Content_Types].xml', $contentTypes);
+        }
+
+        foreach ($extra as $name => $contents) {
+            $zip->addFromString($name, $contents);
+        }
+
+        $zip->close();
+        $bytes = (string) file_get_contents($path);
+        unlink($path);
+
+        return $bytes;
+    }
+
+    /** Report-style PDF that opens at page 1 / fit width: legitimate /OpenAction. */
+    public static function pdfWithOpenAction(): string
+    {
+        return "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R /OpenAction [3 0 R /Fit] >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
+    }
+
+    /** JavaScript hidden behind PDF name escapes: /J#61vaScript == /JavaScript. */
+    public static function pdfWithEscapedJavascript(): string
+    {
+        return "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /OpenAction << /S /J#61vaScript /J#53 (app.alert(1)) >> >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
+    }
+
+    /**
+     * xlsx whose part really decompresses to $realBytes but whose zip headers
+     * claim it is 100 bytes (sizes in the local header and central directory
+     * are uploader controlled).
+     */
+    public static function ooxmlWithLyingSize(int $realBytes = 3 * 1024 * 1024 + 7): string
+    {
+        $bytes = self::ooxml('xlsx', ['xl/big.xml' => str_repeat('A', $realBytes)]);
+        $real = pack('V', $realBytes);
+
+        if (substr_count($bytes, $real) !== 2) {
+            throw new \RuntimeException('Could not locate the size fields to patch.');
+        }
+
+        return str_replace($real, pack('V', 100), $bytes);
+    }
+
+    /** [Content_Types].xml in UTF-16 with an internal DTD and entity. */
+    public static function utf16ContentTypesWithDoctype(): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-16"?>'
+            .'<!DOCTYPE Types [<!ENTITY t "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml">]>'
+            .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            .'<Override PartName="/xl/workbook.xml" ContentType="&t;"/></Types>';
+
+        return "\xFF\xFE".mb_convert_encoding($xml, 'UTF-16LE', 'UTF-8');
+    }
 }

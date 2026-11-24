@@ -17,6 +17,8 @@ use Intervention\Image\Typography\FontFactory;
  *   new Watermark(path: $logo, tile: true, scale: 0.15, opacity: 20)
  *
  * Runs before re-encoding, so the result is still stripped and re-encoded.
+ *
+ * @api
  */
 final class Watermark implements ImageTransformer
 {

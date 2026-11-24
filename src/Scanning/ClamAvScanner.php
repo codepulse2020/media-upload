@@ -10,6 +10,8 @@ use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
  * Talks to clamd using the INSTREAM command.
  * socket: "unix:///var/run/clamav/clamd.ctl" or "tcp://127.0.0.1:3310".
  * $maxBytes must not exceed clamd's StreamMaxLength (25 MB by default).
+ *
+ * @api
  */
 final class ClamAvScanner implements VirusScanner
 {

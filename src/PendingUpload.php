@@ -5,6 +5,8 @@ namespace CodePulse\MediaUpload;
 /**
  * Returned by storeAsync(). Listen for UploadStored / UploadRejected and match
  * them by $id (also available as $event->id).
+ *
+ * @api
  */
 final class PendingUpload
 {
