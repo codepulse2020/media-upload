@@ -1,11 +1,11 @@
 <?php
 
-namespace CodePulse\MediaUpload\Pipeline;
+namespace CodePulse2020\MediaUpload\Pipeline;
 
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\Support\MimeMap;
-use CodePulse\MediaUpload\Support\OoxmlInspector;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Support\MimeMap;
+use CodePulse2020\MediaUpload\Support\OoxmlInspector;
+use CodePulse2020\MediaUpload\UploadContext;
 use finfo;
 
 /**

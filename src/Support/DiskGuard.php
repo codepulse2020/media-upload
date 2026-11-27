@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
 
 /** @internal */
 final class DiskGuard

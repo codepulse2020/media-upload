@@ -1,9 +1,9 @@
 <?php
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\UploadContext;
 use Illuminate\Support\Facades\Storage;
 
 it('stores public profiles under the public prefix with a permanent URL', function () {

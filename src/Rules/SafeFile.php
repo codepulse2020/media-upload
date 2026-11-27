@@ -1,10 +1,10 @@
 <?php
 
-namespace CodePulse\MediaUpload\Rules;
+namespace CodePulse2020\MediaUpload\Rules;
 
 use Closure;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\MediaUploader;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\MediaUploader;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Http\UploadedFile;
 

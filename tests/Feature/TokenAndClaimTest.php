@@ -1,15 +1,15 @@
 <?php
 
-use CodePulse\MediaUpload\Events\UploadStored;
-use CodePulse\MediaUpload\Exceptions\InvalidUploadTokenException as Invalid;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Jobs\ProcessQuarantinedUpload;
-use CodePulse\MediaUpload\MediaUploader;
-use CodePulse\MediaUpload\Rules\UploadToken;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\UploadContext;
-use CodePulse\MediaUpload\Support\Locks;
+use CodePulse2020\MediaUpload\Events\UploadStored;
+use CodePulse2020\MediaUpload\Exceptions\InvalidUploadTokenException as Invalid;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Jobs\ProcessQuarantinedUpload;
+use CodePulse2020\MediaUpload\MediaUploader;
+use CodePulse2020\MediaUpload\Rules\UploadToken;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Support\Locks;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;

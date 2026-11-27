@@ -1,10 +1,10 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Pipeline\HookRunner;
-use CodePulse\MediaUpload\Support\MimeMap;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Pipeline\HookRunner;
+use CodePulse2020\MediaUpload\Support\MimeMap;
 
 /**
  * An immutable, fully resolved set of upload rules.

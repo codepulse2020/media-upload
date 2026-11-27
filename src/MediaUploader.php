@@ -1,22 +1,22 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
 use Closure;
-use CodePulse\MediaUpload\Contracts\ImageTransformer;
-use CodePulse\MediaUpload\Contracts\Stage;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Pipeline\HookRunner;
-use CodePulse\MediaUpload\Exceptions\InvalidUploadTokenException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Http\ServeFileController;
-use CodePulse\MediaUpload\Support\DiskGuard;
-use CodePulse\MediaUpload\Support\FilenameSanitizer;
-use CodePulse\MediaUpload\Support\Locks;
-use CodePulse\MediaUpload\Support\MimeMap;
-use CodePulse\MediaUpload\Support\StorageWriter;
-use CodePulse\MediaUpload\Support\TokenSigner;
-use CodePulse\MediaUpload\Support\ServePolicy;
+use CodePulse2020\MediaUpload\Contracts\ImageTransformer;
+use CodePulse2020\MediaUpload\Contracts\Stage;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Pipeline\HookRunner;
+use CodePulse2020\MediaUpload\Exceptions\InvalidUploadTokenException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Http\ServeFileController;
+use CodePulse2020\MediaUpload\Support\DiskGuard;
+use CodePulse2020\MediaUpload\Support\FilenameSanitizer;
+use CodePulse2020\MediaUpload\Support\Locks;
+use CodePulse2020\MediaUpload\Support\MimeMap;
+use CodePulse2020\MediaUpload\Support\StorageWriter;
+use CodePulse2020\MediaUpload\Support\TokenSigner;
+use CodePulse2020\MediaUpload\Support\ServePolicy;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Filesystem\AwsS3V3Adapter;

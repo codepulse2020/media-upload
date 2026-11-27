@@ -1,12 +1,12 @@
 <?php
 
-use CodePulse\MediaUpload\Contracts\Stage;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\Transformers\Watermark;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\Stage;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Transformers\Watermark;
+use CodePulse2020\MediaUpload\UploadContext;
 use Illuminate\Support\Facades\Storage;
 
 function pixel(string $bytes, int $x, int $y): array

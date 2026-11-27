@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload\Exceptions;
+namespace CodePulse2020\MediaUpload\Exceptions;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

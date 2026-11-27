@@ -1,7 +1,7 @@
 <?php
 
-use CodePulse\MediaUpload\Handlers;
-use CodePulse\MediaUpload\Scanning;
+use CodePulse2020\MediaUpload\Handlers;
+use CodePulse2020\MediaUpload\Scanning;
 
 return [
 

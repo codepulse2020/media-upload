@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload\Tests;
+namespace CodePulse2020\MediaUpload\Tests;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;

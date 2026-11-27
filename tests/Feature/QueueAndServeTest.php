@@ -1,14 +1,14 @@
 <?php
 
-use CodePulse\MediaUpload\Events\UploadRejected;
-use CodePulse\MediaUpload\Events\UploadStored;
-use CodePulse\MediaUpload\Exceptions\NonSerializableHookException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Jobs\ProcessQuarantinedUpload;
-use CodePulse\MediaUpload\Rules\SafeFile;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\Transformers\Watermark;
+use CodePulse2020\MediaUpload\Events\UploadRejected;
+use CodePulse2020\MediaUpload\Events\UploadStored;
+use CodePulse2020\MediaUpload\Exceptions\NonSerializableHookException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Jobs\ProcessQuarantinedUpload;
+use CodePulse2020\MediaUpload\Rules\SafeFile;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Transformers\Watermark;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -33,7 +33,7 @@ it('quarantines and processes uploads on the queue', function () {
     });
 
     // Simulate the worker (serialize round trip included).
-    unserialize(serialize($job))->handle(app(\CodePulse\MediaUpload\MediaUploader::class));
+    unserialize(serialize($job))->handle(app(\CodePulse2020\MediaUpload\MediaUploader::class));
 
     Event::assertDispatched(UploadStored::class, fn ($e) => $e->id === $pending->id
         && $e->context === ['user_id' => 7]
@@ -49,7 +49,7 @@ it('reports rejections from the queue through events', function () {
     $pending = MediaUpload::storeAsync(Fixtures::upload(Fixtures::pngBomb(), 'bomb.png'));
 
     Queue::assertPushed(ProcessQuarantinedUpload::class, function ($job) {
-        $job->handle(app(\CodePulse\MediaUpload\MediaUploader::class));
+        $job->handle(app(\CodePulse2020\MediaUpload\MediaUploader::class));
 
         return true;
     });

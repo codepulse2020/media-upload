@@ -1,14 +1,14 @@
 <?php
 
-namespace CodePulse\MediaUpload\Pipeline;
+namespace CodePulse2020\MediaUpload\Pipeline;
 
 use Closure;
-use CodePulse\MediaUpload\Contracts\ImageTransformer;
-use CodePulse\MediaUpload\Contracts\Stage;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Support\HookResolver;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\ImageTransformer;
+use CodePulse2020\MediaUpload\Contracts\Stage;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Support\HookResolver;
+use CodePulse2020\MediaUpload\UploadContext;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Pipeline\Pipeline;
 

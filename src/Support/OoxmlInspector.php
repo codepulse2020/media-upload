@@ -1,9 +1,9 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
 use DOMDocument;
 use ZipArchive;
 

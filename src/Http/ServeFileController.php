@@ -1,9 +1,9 @@
 <?php
 
-namespace CodePulse\MediaUpload\Http;
+namespace CodePulse2020\MediaUpload\Http;
 
-use CodePulse\MediaUpload\MediaUploader;
-use CodePulse\MediaUpload\Support\ServePolicy;
+use CodePulse2020\MediaUpload\MediaUploader;
+use CodePulse2020\MediaUpload\Support\ServePolicy;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 

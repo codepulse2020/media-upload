@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
 /**
  * Returned by storeAsync(). Listen for UploadStored / UploadRejected and match

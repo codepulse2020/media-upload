@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload\Events;
+namespace CodePulse2020\MediaUpload\Events;
 
-use CodePulse\MediaUpload\StoredFile;
+use CodePulse2020\MediaUpload\StoredFile;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /** @api */

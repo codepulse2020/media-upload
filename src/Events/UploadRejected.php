@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload\Events;
+namespace CodePulse2020\MediaUpload\Events;
 
 use Illuminate\Foundation\Events\Dispatchable;
 

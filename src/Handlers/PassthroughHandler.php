@@ -1,9 +1,9 @@
 <?php
 
-namespace CodePulse\MediaUpload\Handlers;
+namespace CodePulse2020\MediaUpload\Handlers;
 
-use CodePulse\MediaUpload\Contracts\FileHandler;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\FileHandler;
+use CodePulse2020\MediaUpload\UploadContext;
 
 /**
  * Stores whitelisted, non-transformable types as they are. Such files are

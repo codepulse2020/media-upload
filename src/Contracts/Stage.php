@@ -1,9 +1,9 @@
 <?php
 
-namespace CodePulse\MediaUpload\Contracts;
+namespace CodePulse2020\MediaUpload\Contracts;
 
 use Closure;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\UploadContext;
 
 /**
  * A business hook. Works like Laravel middleware: call $next($ctx) to continue.

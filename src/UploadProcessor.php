@@ -1,20 +1,20 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
-use CodePulse\MediaUpload\Contracts\FileHandler;
-use CodePulse\MediaUpload\Events\UploadRejected;
-use CodePulse\MediaUpload\Events\UploadStored;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\Pipeline\HookRunner;
-use CodePulse\MediaUpload\Pipeline\ScanVirus;
-use CodePulse\MediaUpload\Pipeline\SniffMimeType;
-use CodePulse\MediaUpload\Pipeline\StoreFile;
-use CodePulse\MediaUpload\Pipeline\ValidateUpload;
-use CodePulse\MediaUpload\Support\FilenameSanitizer;
-use CodePulse\MediaUpload\Transformers\Fit;
-use CodePulse\MediaUpload\Transformers\Resize;
+use CodePulse2020\MediaUpload\Contracts\FileHandler;
+use CodePulse2020\MediaUpload\Events\UploadRejected;
+use CodePulse2020\MediaUpload\Events\UploadStored;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Pipeline\HookRunner;
+use CodePulse2020\MediaUpload\Pipeline\ScanVirus;
+use CodePulse2020\MediaUpload\Pipeline\SniffMimeType;
+use CodePulse2020\MediaUpload\Pipeline\StoreFile;
+use CodePulse2020\MediaUpload\Pipeline\ValidateUpload;
+use CodePulse2020\MediaUpload\Support\FilenameSanitizer;
+use CodePulse2020\MediaUpload\Transformers\Fit;
+use CodePulse2020\MediaUpload\Transformers\Resize;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;

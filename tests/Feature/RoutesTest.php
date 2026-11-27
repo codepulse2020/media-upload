@@ -1,8 +1,8 @@
 <?php
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
 use Illuminate\Routing\RouteCollection;
 use Illuminate\Support\Facades\Route;
 

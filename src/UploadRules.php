@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
-use CodePulse\MediaUpload\Support\MimeMap;
+use CodePulse2020\MediaUpload\Support\MimeMap;
 
 /**
  * Read-only view of a profile's rules, e.g. to configure a form component

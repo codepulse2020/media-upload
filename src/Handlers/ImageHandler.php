@@ -1,13 +1,13 @@
 <?php
 
-namespace CodePulse\MediaUpload\Handlers;
+namespace CodePulse2020\MediaUpload\Handlers;
 
-use CodePulse\MediaUpload\Contracts\FileHandler;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\Support\FrameCounter;
-use CodePulse\MediaUpload\Support\MimeMap;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\FileHandler;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Support\FrameCounter;
+use CodePulse2020\MediaUpload\Support\MimeMap;
+use CodePulse2020\MediaUpload\UploadContext;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\ImageInterface;
 

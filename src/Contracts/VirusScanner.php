@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload\Contracts;
+namespace CodePulse2020\MediaUpload\Contracts;
 
-use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
+use CodePulse2020\MediaUpload\Exceptions\ScannerUnavailableException;
 
 /** @api */
 interface VirusScanner

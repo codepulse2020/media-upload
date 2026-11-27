@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload\Console;
+namespace CodePulse2020\MediaUpload\Console;
 
 use Illuminate\Console\Command;
 

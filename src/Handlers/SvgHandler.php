@@ -1,11 +1,11 @@
 <?php
 
-namespace CodePulse\MediaUpload\Handlers;
+namespace CodePulse2020\MediaUpload\Handlers;
 
-use CodePulse\MediaUpload\Contracts\FileHandler;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\FileHandler;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\UploadContext;
 use enshrined\svgSanitize\Sanitizer;
 
 /**

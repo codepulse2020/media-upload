@@ -1,4 +1,4 @@
-# codepulse/media-upload
+# codepulse2020/media-upload
 
 Laravel 的安全檔案上傳套件，預設就是安全設定（secure by default）。圖片會被**重新編碼**，所以 polyglot、EXIF/GPS、尾端夾帶的惡意內容都會被清掉。業務邏輯（配額、浮水印、縮圖…）透過 hook 插入，但**無法跳過核心安全步驟**。
 
@@ -6,7 +6,7 @@ Laravel 的安全檔案上傳套件，預設就是安全設定（secure by defau
 - 需要 `ext-fileinfo`、`ext-gd`（或 `ext-imagick`）；JPEG 自動轉正需要 `ext-exif`
 
 ```bash
-composer require codepulse/media-upload
+composer require codepulse2020/media-upload
 php artisan vendor:publish --tag=media-upload-config
 ```
 
@@ -16,7 +16,7 @@ php artisan vendor:publish --tag=media-upload-config
 
 ```php
 // routes/web.php
-use CodePulse\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
 
 MediaUpload::routes();                                  // GET media-upload/files/{path}
 
@@ -49,9 +49,9 @@ StoreFile        ULID 檔名、只寫入 private disk
 ## 使用
 
 ```php
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Rules\SafeFile;
-use CodePulse\MediaUpload\Transformers\Watermark;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Rules\SafeFile;
+use CodePulse2020\MediaUpload\Transformers\Watermark;
 
 // FormRequest：提早給使用者回饋（只做大小、副檔名、MIME 檢查）
 'photo' => ['required', new SafeFile('avatar')],
@@ -120,9 +120,9 @@ $files = array_map(fn ($t) => MediaUpload::claim($t, 'contact', $member->id), $r
 ## Hook
 
 ```php
-use CodePulse\MediaUpload\Contracts\Stage;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\Stage;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\UploadContext;
 
 final class CheckStorageQuota implements Stage
 {

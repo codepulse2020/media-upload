@@ -1,5 +1,5 @@
 {
-    "name": "codepulse/media-upload",
+    "name": "codepulse2020/media-upload",
     "description": "Secure-by-default file and image upload pipeline for Laravel.",
     "type": "library",
     "license": "MIT",
@@ -31,21 +31,21 @@
     },
     "autoload": {
         "psr-4": {
-            "CodePulse\\MediaUpload\\": "src/"
+            "CodePulse2020\\MediaUpload\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "CodePulse\\MediaUpload\\Tests\\": "tests/"
+            "CodePulse2020\\MediaUpload\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "CodePulse\\MediaUpload\\MediaUploadServiceProvider"
+                "CodePulse2020\\MediaUpload\\MediaUploadServiceProvider"
             ],
             "aliases": {
-                "MediaUpload": "CodePulse\\MediaUpload\\Facades\\MediaUpload"
+                "MediaUpload": "CodePulse2020\\MediaUpload\\Facades\\MediaUpload"
             }
         }
     },

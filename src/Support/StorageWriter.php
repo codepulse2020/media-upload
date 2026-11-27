@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
 use Aws\CommandInterface;
 use Aws\Middleware;

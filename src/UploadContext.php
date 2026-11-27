@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
 use Intervention\Image\Interfaces\ImageInterface;
 use SplFileInfo;

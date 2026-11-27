@@ -1,9 +1,9 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\InvalidUploadTokenException as Invalid;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\InvalidUploadTokenException as Invalid;
 
 /**
  * Compact signed tokens: base64url(json) "." base64url(hmac-sha256).

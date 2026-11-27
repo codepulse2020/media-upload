@@ -1,18 +1,18 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
-use CodePulse\MediaUpload\Console\PruneCommand;
-use CodePulse\MediaUpload\Contracts\VirusScanner;
-use CodePulse\MediaUpload\Handlers\PdfHandler;
-use CodePulse\MediaUpload\Handlers\SvgHandler;
-use CodePulse\MediaUpload\Pipeline\ScanVirus;
-use CodePulse\MediaUpload\Pipeline\SniffMimeType;
-use CodePulse\MediaUpload\Pipeline\StoreFile;
-use CodePulse\MediaUpload\Pipeline\ValidateUpload;
-use CodePulse\MediaUpload\Scanning\ClamAvScanner;
-use CodePulse\MediaUpload\Support\MimeMap;
-use CodePulse\MediaUpload\Support\ServePolicy;
+use CodePulse2020\MediaUpload\Console\PruneCommand;
+use CodePulse2020\MediaUpload\Contracts\VirusScanner;
+use CodePulse2020\MediaUpload\Handlers\PdfHandler;
+use CodePulse2020\MediaUpload\Handlers\SvgHandler;
+use CodePulse2020\MediaUpload\Pipeline\ScanVirus;
+use CodePulse2020\MediaUpload\Pipeline\SniffMimeType;
+use CodePulse2020\MediaUpload\Pipeline\StoreFile;
+use CodePulse2020\MediaUpload\Pipeline\ValidateUpload;
+use CodePulse2020\MediaUpload\Scanning\ClamAvScanner;
+use CodePulse2020\MediaUpload\Support\MimeMap;
+use CodePulse2020\MediaUpload\Support\ServePolicy;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 

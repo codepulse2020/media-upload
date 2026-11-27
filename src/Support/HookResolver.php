@@ -1,12 +1,12 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
 use Closure;
-use CodePulse\MediaUpload\Contracts\ImageTransformer;
-use CodePulse\MediaUpload\Contracts\Stage;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\NonSerializableHookException;
+use CodePulse2020\MediaUpload\Contracts\ImageTransformer;
+use CodePulse2020\MediaUpload\Contracts\Stage;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\NonSerializableHookException;
 use Illuminate\Contracts\Container\Container;
 
 /**

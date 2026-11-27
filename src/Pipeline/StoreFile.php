@@ -1,15 +1,15 @@
 <?php
 
-namespace CodePulse\MediaUpload\Pipeline;
+namespace CodePulse2020\MediaUpload\Pipeline;
 
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\StoredFile;
-use CodePulse\MediaUpload\Support\DiskGuard;
-use CodePulse\MediaUpload\Support\Locks;
-use CodePulse\MediaUpload\Support\ServePolicy;
-use CodePulse\MediaUpload\Support\StorageWriter;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\StoredFile;
+use CodePulse2020\MediaUpload\Support\DiskGuard;
+use CodePulse2020\MediaUpload\Support\Locks;
+use CodePulse2020\MediaUpload\Support\ServePolicy;
+use CodePulse2020\MediaUpload\Support\StorageWriter;
+use CodePulse2020\MediaUpload\UploadContext;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Support\Str;

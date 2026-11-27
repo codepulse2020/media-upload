@@ -1,11 +1,11 @@
 <?php
 
-namespace CodePulse\MediaUpload\Handlers;
+namespace CodePulse2020\MediaUpload\Handlers;
 
-use CodePulse\MediaUpload\Contracts\FileHandler;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\Support\OoxmlInspector;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\FileHandler;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Support\OoxmlInspector;
+use CodePulse2020\MediaUpload\UploadContext;
 
 /**
  * Office Open XML documents. Stored as-is (always private, served as

@@ -1,9 +1,9 @@
 <?php
 
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\UploadContext;
 use Illuminate\Support\Facades\Storage;
 
 function rejection(callable $callback): ?string

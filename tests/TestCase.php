@@ -1,9 +1,9 @@
 <?php
 
-namespace CodePulse\MediaUpload\Tests;
+namespace CodePulse2020\MediaUpload\Tests;
 
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\MediaUploadServiceProvider;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\MediaUploadServiceProvider;
 use Illuminate\Support\Facades\Storage;
 use Orchestra\Testbench\TestCase as Orchestra;
 

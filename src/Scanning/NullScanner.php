@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload\Scanning;
+namespace CodePulse2020\MediaUpload\Scanning;
 
-use CodePulse\MediaUpload\Contracts\VirusScanner;
+use CodePulse2020\MediaUpload\Contracts\VirusScanner;
 
 /** @api */
 final class NullScanner implements VirusScanner

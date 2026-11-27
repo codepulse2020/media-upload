@@ -1,8 +1,8 @@
 <?php
 
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Support\FrameCounter;
-use CodePulse\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Support\FrameCounter;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
 use Illuminate\Support\Facades\Storage;
 
 /*

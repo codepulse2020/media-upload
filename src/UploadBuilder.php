@@ -1,18 +1,18 @@
 <?php
 
-namespace CodePulse\MediaUpload;
+namespace CodePulse2020\MediaUpload;
 
 use Closure;
-use CodePulse\MediaUpload\Contracts\ImageTransformer;
-use CodePulse\MediaUpload\Contracts\Stage;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\NonSerializableHookException;
-use CodePulse\MediaUpload\Jobs\ProcessQuarantinedUpload;
-use CodePulse\MediaUpload\Pipeline\HookRunner;
-use CodePulse\MediaUpload\Support\DiskGuard;
-use CodePulse\MediaUpload\Support\HookResolver;
-use CodePulse\MediaUpload\Support\SourceNormalizer;
-use CodePulse\MediaUpload\Support\StorageWriter;
+use CodePulse2020\MediaUpload\Contracts\ImageTransformer;
+use CodePulse2020\MediaUpload\Contracts\Stage;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\NonSerializableHookException;
+use CodePulse2020\MediaUpload\Jobs\ProcessQuarantinedUpload;
+use CodePulse2020\MediaUpload\Pipeline\HookRunner;
+use CodePulse2020\MediaUpload\Support\DiskGuard;
+use CodePulse2020\MediaUpload\Support\HookResolver;
+use CodePulse2020\MediaUpload\Support\SourceNormalizer;
+use CodePulse2020\MediaUpload\Support\StorageWriter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use SplFileInfo;

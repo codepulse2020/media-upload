@@ -1,12 +1,12 @@
 <?php
 
-namespace CodePulse\MediaUpload\Pipeline;
+namespace CodePulse2020\MediaUpload\Pipeline;
 
-use CodePulse\MediaUpload\Contracts\VirusScanner;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
-use CodePulse\MediaUpload\Exceptions\ScanLimitExceededException;
-use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\VirusScanner;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Exceptions\ScanLimitExceededException;
+use CodePulse2020\MediaUpload\Exceptions\ScannerUnavailableException;
+use CodePulse2020\MediaUpload\UploadContext;
 
 /** @internal */
 final class ScanVirus

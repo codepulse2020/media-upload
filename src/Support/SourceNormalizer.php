@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException as Rejected;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
 use Illuminate\Http\UploadedFile;
 use SplFileInfo;
 use Symfony\Component\HttpFoundation\File\File;

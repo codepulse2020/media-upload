@@ -1,9 +1,9 @@
 <?php
 
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\Tests\RemoteUploadedFile;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Tests\RemoteUploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 function tempCopies(): array

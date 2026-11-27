@@ -1,14 +1,14 @@
 <?php
 
-namespace CodePulse\MediaUpload\Jobs;
+namespace CodePulse2020\MediaUpload\Jobs;
 
-use CodePulse\MediaUpload\Events\UploadRejected;
-use CodePulse\MediaUpload\Events\UploadStored;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\MediaUploader;
-use CodePulse\MediaUpload\Profile;
-use CodePulse\MediaUpload\StoredFile;
-use CodePulse\MediaUpload\Support\StorageWriter;
+use CodePulse2020\MediaUpload\Events\UploadRejected;
+use CodePulse2020\MediaUpload\Events\UploadStored;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\MediaUploader;
+use CodePulse2020\MediaUpload\Profile;
+use CodePulse2020\MediaUpload\StoredFile;
+use CodePulse2020\MediaUpload\Support\StorageWriter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

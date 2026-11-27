@@ -1,13 +1,13 @@
 <?php
 
-use CodePulse\MediaUpload\Contracts\VirusScanner;
-use CodePulse\MediaUpload\Events\UploadRejected;
-use CodePulse\MediaUpload\Events\UploadStored;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Contracts\VirusScanner;
+use CodePulse2020\MediaUpload\Events\UploadRejected;
+use CodePulse2020\MediaUpload\Events\UploadStored;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Exceptions\ScannerUnavailableException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 

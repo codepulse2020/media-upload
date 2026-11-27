@@ -2,11 +2,11 @@
 
 use Aws\CommandInterface;
 use Aws\Middleware;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\MediaUploader;
-use CodePulse\MediaUpload\Jobs\ProcessQuarantinedUpload;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\Tests\RemoteUploadedFile;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\MediaUploader;
+use CodePulse2020\MediaUpload\Jobs\ProcessQuarantinedUpload;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Tests\RemoteUploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;

@@ -1,8 +1,8 @@
 <?php
 
-namespace CodePulse\MediaUpload\Contracts;
+namespace CodePulse2020\MediaUpload\Contracts;
 
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\UploadContext;
 use Intervention\Image\Interfaces\ImageInterface;
 
 /**

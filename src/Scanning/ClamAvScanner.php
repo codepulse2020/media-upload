@@ -1,10 +1,10 @@
 <?php
 
-namespace CodePulse\MediaUpload\Scanning;
+namespace CodePulse2020\MediaUpload\Scanning;
 
-use CodePulse\MediaUpload\Contracts\VirusScanner;
-use CodePulse\MediaUpload\Exceptions\ScanLimitExceededException;
-use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
+use CodePulse2020\MediaUpload\Contracts\VirusScanner;
+use CodePulse2020\MediaUpload\Exceptions\ScanLimitExceededException;
+use CodePulse2020\MediaUpload\Exceptions\ScannerUnavailableException;
 
 /**
  * Talks to clamd using the INSTREAM command.

@@ -1,10 +1,10 @@
 <?php
 
-namespace CodePulse\MediaUpload\Transformers;
+namespace CodePulse2020\MediaUpload\Transformers;
 
-use CodePulse\MediaUpload\Contracts\ImageTransformer;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\ImageTransformer;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\UploadContext;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Interfaces\ImageInterface;
 use Intervention\Image\Typography\FontFactory;

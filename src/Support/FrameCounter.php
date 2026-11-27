@@ -1,6 +1,6 @@
 <?php
 
-namespace CodePulse\MediaUpload\Support;
+namespace CodePulse2020\MediaUpload\Support;
 
 /**
  * Counts animation frames by walking the container structure, without

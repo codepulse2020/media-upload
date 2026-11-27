@@ -1,21 +1,21 @@
 <?php
 
-use CodePulse\MediaUpload\Contracts\VirusScanner;
-use CodePulse\MediaUpload\Events\UploadRejected;
-use CodePulse\MediaUpload\Events\UploadStored;
-use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
-use CodePulse\MediaUpload\Exceptions\NonSerializableHookException;
-use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
-use CodePulse\MediaUpload\Exceptions\ScanLimitExceededException;
-use CodePulse\MediaUpload\Exceptions\ScannerUnavailableException;
-use CodePulse\MediaUpload\Facades\MediaUpload;
-use CodePulse\MediaUpload\Jobs\ProcessQuarantinedUpload;
-use CodePulse\MediaUpload\MediaUploader;
-use CodePulse\MediaUpload\Scanning\ClamAvScanner;
-use CodePulse\MediaUpload\Support\ServePolicy;
-use CodePulse\MediaUpload\Tests\Fixtures;
-use CodePulse\MediaUpload\Tests\QueueJobStub;
-use CodePulse\MediaUpload\UploadContext;
+use CodePulse2020\MediaUpload\Contracts\VirusScanner;
+use CodePulse2020\MediaUpload\Events\UploadRejected;
+use CodePulse2020\MediaUpload\Events\UploadStored;
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
+use CodePulse2020\MediaUpload\Exceptions\NonSerializableHookException;
+use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse2020\MediaUpload\Exceptions\ScanLimitExceededException;
+use CodePulse2020\MediaUpload\Exceptions\ScannerUnavailableException;
+use CodePulse2020\MediaUpload\Facades\MediaUpload;
+use CodePulse2020\MediaUpload\Jobs\ProcessQuarantinedUpload;
+use CodePulse2020\MediaUpload\MediaUploader;
+use CodePulse2020\MediaUpload\Scanning\ClamAvScanner;
+use CodePulse2020\MediaUpload\Support\ServePolicy;
+use CodePulse2020\MediaUpload\Tests\Fixtures;
+use CodePulse2020\MediaUpload\Tests\QueueJobStub;
+use CodePulse2020\MediaUpload\UploadContext;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -265,7 +265,7 @@ it('rejects unserializable values nested in hook parameters before quarantining'
     Queue::fake();
 
     expect(fn () => MediaUpload::profile('image')
-        ->hook('validated', [CodePulse\MediaUpload\Transformers\Resize::class, ['width' => fn () => 1]])
+        ->hook('validated', [CodePulse2020\MediaUpload\Transformers\Resize::class, ['width' => fn () => 1]])
         ->storeAsync(Fixtures::upload(Fixtures::jpeg(), 'a.jpg')))->toThrow(NonSerializableHookException::class);
 
     Queue::assertNothingPushed();
