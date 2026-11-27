@@ -6,7 +6,6 @@ use CodePulse\MediaUpload\Console\PruneCommand;
 use CodePulse\MediaUpload\Contracts\VirusScanner;
 use CodePulse\MediaUpload\Handlers\PdfHandler;
 use CodePulse\MediaUpload\Handlers\SvgHandler;
-use CodePulse\MediaUpload\Http\ServeFileController;
 use CodePulse\MediaUpload\Pipeline\ScanVirus;
 use CodePulse\MediaUpload\Pipeline\SniffMimeType;
 use CodePulse\MediaUpload\Pipeline\StoreFile;
@@ -15,8 +14,6 @@ use CodePulse\MediaUpload\Scanning\ClamAvScanner;
 use CodePulse\MediaUpload\Support\MimeMap;
 use CodePulse\MediaUpload\Support\ServePolicy;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Routing\Middleware\ValidateSignature;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 /** @internal */
@@ -108,17 +105,6 @@ final class MediaUploadServiceProvider extends ServiceProvider
             ], 'media-upload-config');
 
             $this->commands([PruneCommand::class]);
-        }
-
-        if (config('media-upload.serve.enabled', true)) {
-            Route::get(config('media-upload.serve.route', 'media-upload/files/{path}'), ServeFileController::class)
-                ->where('path', '.*')
-                // The signature check is always first; serve.middleware can only add to it.
-                ->middleware(array_values(array_unique(array_merge(
-                    [ValidateSignature::class],
-                    (array) config('media-upload.serve.middleware', []),
-                ))))
-                ->name(config('media-upload.serve.name', 'media-upload.serve'));
         }
     }
 }

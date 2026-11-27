@@ -19,6 +19,7 @@
 - `claim()` 改為鎖定最終位置（與 StoreFile 共用），避免兩個待認領檔同時寫入同一個 hook 指定的檔名而互相覆蓋。新增 `locks.wait` 設定。
 
 ### Changed
+- **提供檔案的路由不再自動註冊**，改由使用者在路由檔呼叫 `MediaUpload::routes(?string $uri = null)`，可以放進任何 `Route::group()`，回傳的 route 也能再串接 `->middleware()`。移除 `serve.enabled`（不呼叫 `routes()` 就等於停用）。沒有註冊路由時，proxy 模式的 `url()` 會丟出 `InvalidConfigException`。
 - PDF 預設黑名單移除 `/OpenAction`、`/AA`，並在比對前解開 `#xx` 名稱跳脫。
 - 私有 S3 物件寫入 `Cache-Control: private, no-store`。
 - `StoredFile` 新增 `visibility`、`pendingTarget`、`owner`；舊資料缺少時視為 private。

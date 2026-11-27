@@ -9,6 +9,7 @@ use CodePulse\MediaUpload\Exceptions\InvalidConfigException;
 use CodePulse\MediaUpload\Pipeline\HookRunner;
 use CodePulse\MediaUpload\Exceptions\InvalidUploadTokenException;
 use CodePulse\MediaUpload\Exceptions\RejectedUploadException;
+use CodePulse\MediaUpload\Http\ServeFileController;
 use CodePulse\MediaUpload\Support\DiskGuard;
 use CodePulse\MediaUpload\Support\FilenameSanitizer;
 use CodePulse\MediaUpload\Support\Locks;
@@ -20,6 +21,9 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Filesystem\AwsS3V3Adapter;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Middleware\ValidateSignature;
+use Illuminate\Routing\Route;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\URL;
 use SplFileInfo;
 
@@ -115,10 +119,6 @@ final class MediaUploader
             ]);
         }
 
-        if (! ($serve['enabled'] ?? true)) {
-            throw new InvalidConfigException('The serve route is disabled (media-upload.serve.enabled).');
-        }
-
         $parameters = ['path' => $path, 'disk' => $disk, 'name' => FilenameSanitizer::sanitize($downloadName)];
 
         // Part of the signature, so the attachment policy cannot be removed from the URL.
@@ -126,7 +126,54 @@ final class MediaUploader
             $parameters['download'] = 1;
         }
 
-        return URL::temporarySignedRoute($serve['name'] ?? 'media-upload.serve', $expires, $parameters);
+        return URL::temporarySignedRoute($this->serveRouteName($serve), $expires, $parameters);
+    }
+
+    /**
+     * Register the signed file-serving route used by url().
+     *
+     * Call it wherever the route should live, e.g. in routes/web.php or inside a
+     * Route::group() with your own prefix, domain or middleware. The signature check
+     * always runs first; chain ->middleware() on the returned route to add more.
+     */
+    public function routes(?string $uri = null): Route
+    {
+        $serve = $this->config('serve') ?? [];
+
+        return $this->container->make(Router::class)
+            ->get($uri ?? $serve['route'] ?? 'media-upload/files/{path}', ServeFileController::class)
+            ->where('path', '.*')
+            ->middleware(array_values(array_unique(array_merge(
+                [ValidateSignature::class],
+                (array) ($serve['middleware'] ?? []),
+            ))))
+            ->name($serve['name'] ?? 'media-upload.serve');
+    }
+
+    /**
+     * The configured name, or the name the route ended up with inside a group
+     * that adds a name prefix (e.g. Route::name('admin.')->group(...)).
+     *
+     * @param  array<string, mixed>  $serve
+     */
+    private function serveRouteName(array $serve): string
+    {
+        $name = $serve['name'] ?? 'media-upload.serve';
+        $routes = $this->container->make(Router::class)->getRoutes();
+
+        if ($routes->hasNamedRoute($name)) {
+            return $name;
+        }
+
+        // Invokable controllers are keyed with or without "@__invoke" depending on the Laravel version.
+        $registered = ($routes->getByAction(ServeFileController::class)
+            ?? $routes->getByAction(ServeFileController::class.'@__invoke'))?->getName();
+
+        if ($registered === null) {
+            throw new InvalidConfigException('The media-upload serve route is not registered. Call MediaUpload::routes() in your routes file.');
+        }
+
+        return $registered;
     }
 
     /** Read-only rules of a profile, e.g. to configure a form component. */

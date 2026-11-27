@@ -10,6 +10,27 @@ composer require codepulse/media-upload
 php artisan vendor:publish --tag=media-upload-config
 ```
 
+### 註冊路由
+
+套件不會自動註冊路由。使用 `MediaUpload::url()`（proxy 模式）前，請在路由檔註冊提供檔案的簽章路由：
+
+```php
+// routes/web.php
+use CodePulse\MediaUpload\Facades\MediaUpload;
+
+MediaUpload::routes();                                  // GET media-upload/files/{path}
+
+// 或放進自己的 group，自訂 prefix、domain、middleware
+Route::prefix('admin')->middleware('auth')->group(function () {
+    MediaUpload::routes();                              // GET admin/media-upload/files/{path}
+});
+
+// 自訂路徑，或在回傳的 route 上加 middleware
+MediaUpload::routes('files/{path}')->middleware('throttle:60,1');
+```
+
+簽章驗證一定會最先執行，額外的 middleware 只會加在它後面。路徑、路由名稱與預設 middleware 也可以用 `serve.route`、`serve.name`、`serve.middleware` 設定。放在有名稱前綴的 group 裡（例如 `Route::name('admin.')`）也沒問題，`url()` 會找到實際註冊的路由。沒有註冊路由時，`url()` 會丟出 `InvalidConfigException`。
+
 ## 流程
 
 ```

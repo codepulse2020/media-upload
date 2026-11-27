@@ -341,6 +341,11 @@ return [
     | 提供檔案
     |--------------------------------------------------------------------------
     |
+    | 路由不會自動註冊，請在路由檔呼叫 MediaUpload::routes()（可放在
+    | Route::group() 內自訂 prefix、domain 或 middleware）。route、name、
+    | middleware 為 routes() 使用的預設值。未註冊路由時，proxy 模式的
+    | MediaUpload::url() 會丟出 InvalidConfigException。
+    |
     | MediaUpload::url() 會產生具時效的簽章網址，經由此路由回傳檔案並附上
     | 防止 MIME sniffing 與腳本執行的 headers。url_ttl 單位為分鐘。只有
     | inline_mimes 中的類型、且 profile 未設定 attachment 時，才會在瀏覽器內
@@ -361,7 +366,6 @@ return [
 
     'serve' => [
         'mode' => env('MEDIA_UPLOAD_SERVE_MODE', 'proxy'),
-        'enabled' => true,
         'route' => 'media-upload/files/{path}',
         'name' => 'media-upload.serve',
         'middleware' => [],

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \CodePulse\MediaUpload\PendingUpload storeAsync(\SplFileInfo $file, ?string $profile = null)
  * @method static \CodePulse\MediaUpload\MediaUploader extend(string $point, mixed $hook)
  * @method static string url(\CodePulse\MediaUpload\StoredFile|string $file, ?int $minutes = null, ?string $disk = null, ?string $downloadName = null)
+ * @method static \Illuminate\Routing\Route routes(?string $uri = null)
  * @method static string publicUrl(string $path, ?string $disk = null)
  * @method static \CodePulse\MediaUpload\UploadRules rules(?string $profile = null)
  * @method static string token(\CodePulse\MediaUpload\StoredFile $file, ?int $ttlMinutes = null)
