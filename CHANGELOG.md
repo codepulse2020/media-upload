@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — 1.0.0
+## [1.0.0] — 2026-11-27
 
 ### Added
 - 公開 profile（`visibility: public`）：只限重新編碼的點陣圖，永久網址可指向 CDN（`public.url`），S3 物件寫入長期快取標頭。
