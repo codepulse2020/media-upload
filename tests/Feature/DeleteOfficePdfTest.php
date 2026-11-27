@@ -1,5 +1,6 @@
 <?php
 
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
 use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException as Rejected;
 use CodePulse2020\MediaUpload\Facades\MediaUpload;
 use CodePulse2020\MediaUpload\Tests\Fixtures;
@@ -46,8 +47,8 @@ it('requires force for shared content-addressed files', function () {
         ->and(MediaUpload::delete($stored, force: true))->toBeTrue();
 });
 
-it('deletes hook chosen directories once they are declared', function () {
-    $stored = MediaUpload::profile('image')
+it('only lets hooks write where delete() can remove the file again', function () {
+    $store = fn () => MediaUpload::profile('image')
         ->hook('before_store', function (UploadContext $ctx, Closure $next) {
             $ctx->directory = 'shops/1';
 
@@ -55,10 +56,36 @@ it('deletes hook chosen directories once they are declared', function () {
         })
         ->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
 
-    expect(fn () => MediaUpload::delete($stored))->toThrow(InvalidArgumentException::class);
+    expect($store)->toThrow(InvalidConfigException::class);
 
     config()->set('media-upload.managed_directories', ['shops']);
+    $stored = $store();
+
     expect(MediaUpload::delete($stored))->toBeTrue();
+});
+
+it('deletes files a hook moved to another folder inside the profile directory', function () {
+    config()->set('media-upload.profiles.browser', ['mimes' => ['image/jpeg'], 'max_size' => 1024, 'directory' => 'uploads/browser']);
+
+    $stored = MediaUpload::profile('browser')
+        ->hook('before_store', function (UploadContext $ctx, Closure $next) {
+            $ctx->directory = 'uploads/browser/elsewhere';
+
+            return $next($ctx);
+        })
+        ->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+
+    expect($stored->path)->toStartWith('uploads/browser/elsewhere/')
+        ->and(MediaUpload::delete($stored))->toBeTrue();
+
+    // A sibling of the profile directory is not managed, so it is refused at store time.
+    expect(fn () => MediaUpload::profile('browser')
+        ->hook('before_store', function (UploadContext $ctx, Closure $next) {
+            $ctx->directory = 'uploads/elsewhere';
+
+            return $next($ctx);
+        })
+        ->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg')))->toThrow(InvalidConfigException::class);
 });
 
 /* ----------------------------------------------------------------- office */

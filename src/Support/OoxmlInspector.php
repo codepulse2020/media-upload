@@ -28,6 +28,14 @@ final class OoxmlInspector
 
     public const EXTENSIONS = ['xlsx', 'xlsm', 'docx', 'docm', 'pptx', 'pptm'];
 
+    /** Content types Office executes as macros, whatever the part is called. */
+    private const MACRO_TYPES = [
+        'application/vnd.ms-office.vbaproject',
+        'application/vnd.ms-office.vbaprojectsignature',
+        'application/vnd.ms-excel.macrosheet+xml',
+        'application/vnd.ms-excel.intlmacrosheet+xml',
+    ];
+
     private const CONTENT_TYPES_MAX = 1024 * 1024;
 
     /**
@@ -67,7 +75,7 @@ final class OoxmlInspector
                 $declared += (int) $stat['size'];
 
                 // A VBA project marks macros even inside a file declared as .xlsx/.docx.
-                if (str_ends_with(strtolower($stat['name']), 'vbaproject.bin')) {
+                if (str_contains(strtolower($stat['name']), 'vbaproject')) {
                     $macros = true;
                 }
             }
@@ -81,13 +89,9 @@ final class OoxmlInspector
             // what actually decompresses, stopping at the limit.
             self::assertDecompressedWithin($zip, $names, $maxUncompressed);
 
-            $stat = $zip->statName('[Content_Types].xml');
-
-            if ($stat === false || $stat['size'] > self::CONTENT_TYPES_MAX) {
-                throw Rejected::because(Rejected::CORRUPT_FILE, 'The file is not an Office document.');
-            }
-
-            $main = self::mainPart((string) $zip->getFromName('[Content_Types].xml'));
+            $types = self::parse(self::smallPart($zip, '[Content_Types].xml'));
+            $main = self::mainPart($zip, $types);
+            $macros = $macros || self::declaresMacros($types);
         } finally {
             $zip->close();
         }
@@ -139,9 +143,21 @@ final class OoxmlInspector
         }
     }
 
-    private static function mainPart(string $xml): string
+    /** Reads a small XML part (content types, relationships) with a size cap. */
+    private static function smallPart(ZipArchive $zip, string $name): string
     {
-        // OOXML content types are UTF-8. Refusing other encodings up front
+        $stat = $zip->statName($name);
+
+        if ($stat === false || $stat['size'] > self::CONTENT_TYPES_MAX) {
+            throw Rejected::because(Rejected::CORRUPT_FILE, 'The file is not an Office document.');
+        }
+
+        return (string) $zip->getFromName($name);
+    }
+
+    private static function parse(string $xml): DOMDocument
+    {
+        // OOXML parts are UTF-8. Refusing other encodings up front
         // keeps a UTF-16 "<!DOCTYPE" from slipping past the byte check below.
         if ($xml === ''
             || str_starts_with($xml, "\xFF\xFE") || str_starts_with($xml, "\xFE\xFF")
@@ -163,14 +179,71 @@ final class OoxmlInspector
             throw Rejected::because(Rejected::CORRUPT_FILE, 'The file is not an Office document.');
         }
 
-        foreach ($document->getElementsByTagName('Override') as $override) {
+        return $document;
+    }
+
+    /**
+     * The main part is the target of the package's officeDocument relationship,
+     * as Office resolves it, not whichever Override happens to come first. A
+     * package declaring more than one main part type is refused outright.
+     */
+    private static function mainPart(ZipArchive $zip, DOMDocument $types): string
+    {
+        $overrides = [];
+        $mainTypes = 0;
+
+        foreach ($types->getElementsByTagName('Override') as $override) {
             $type = $override->getAttribute('ContentType');
+            $overrides[strtolower($override->getAttribute('PartName'))] = $type;
 
             if (isset(self::MAIN_PARTS[$type])) {
-                return $type;
+                $mainTypes++;
             }
         }
 
-        throw Rejected::because(Rejected::MIME_NOT_ALLOWED, 'This Office document type is not supported.');
+        if ($mainTypes > 1) {
+            throw Rejected::because(Rejected::UNSAFE_CONTENT, 'The document declares more than one main part.');
+        }
+
+        $target = null;
+
+        foreach (self::parse(self::smallPart($zip, '_rels/.rels'))->getElementsByTagName('Relationship') as $relationship) {
+            if (str_ends_with($relationship->getAttribute('Type'), '/officeDocument')) {
+                if ($target !== null || strcasecmp($relationship->getAttribute('TargetMode'), 'External') === 0) {
+                    throw Rejected::because(Rejected::UNSAFE_CONTENT, 'The document main part is not valid.');
+                }
+
+                $target = '/'.ltrim($relationship->getAttribute('Target'), '/');
+            }
+        }
+
+        if ($target === null || $zip->statName(ltrim($target, '/')) === false) {
+            throw Rejected::because(Rejected::CORRUPT_FILE, 'The file is not an Office document.');
+        }
+
+        $type = $overrides[strtolower($target)] ?? null;
+
+        if ($type === null || ! isset(self::MAIN_PARTS[$type])) {
+            throw Rejected::because(Rejected::MIME_NOT_ALLOWED, 'This Office document type is not supported.');
+        }
+
+        return $type;
+    }
+
+    /**
+     * Office loads a VBA project or an Excel 4.0 macro sheet by its content
+     * type, whatever the part is named, so any such declaration marks macros.
+     */
+    private static function declaresMacros(DOMDocument $types): bool
+    {
+        foreach (['Override', 'Default'] as $tag) {
+            foreach ($types->getElementsByTagName($tag) as $node) {
+                if (in_array(strtolower($node->getAttribute('ContentType')), self::MACRO_TYPES, true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

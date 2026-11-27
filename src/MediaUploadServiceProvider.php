@@ -78,6 +78,7 @@ final class MediaUploadServiceProvider extends ServiceProvider
             $config($app, 'filename.generator', 'ulid'),
             $config($app, 'public.cache_control'),
             (int) $config($app, 'locks.wait', 10),
+            (array) $config($app, 'managed_directories', []),
         ));
 
         $this->app->bind(SvgHandler::class, fn (Application $app) => new SvgHandler((bool) $config($app, 'svg.enabled', false)));

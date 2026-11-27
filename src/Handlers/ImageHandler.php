@@ -144,21 +144,30 @@ final class ImageHandler implements FileHandler
             throw Rejected::because(Rejected::MIME_NOT_ALLOWED, 'This image type is not supported.');
         }
 
-        // Enforce the frame limit inside ImageMagick too (process-wide, so restore it).
-        $limit = defined('Imagick::RESOURCETYPE_LISTLENGTH') ? \Imagick::RESOURCETYPE_LISTLENGTH : null;
-        $previous = $limit !== null ? \Imagick::getResourceLimit($limit) : null;
+        // Enforce the frame and per-frame size limits inside ImageMagick too, because the
+        // header check above only sees the container's declared size (process-wide, so restore).
+        // ImageMagick refuses a sequence once it reaches LISTLENGTH, hence "+ 1". Width/height
+        // limits make it refuse an oversized frame; an AREA limit would only spill to disk.
+        $limits = [];
 
-        if ($limit !== null) {
-            // ImageMagick refuses a sequence once it reaches the limit, hence "+ 1".
-            \Imagick::setResourceLimit($limit, ($animated ? max(1, (int) ($options['max_frames'] ?? 100)) : 1) + 1);
+        foreach ([
+            'RESOURCETYPE_LISTLENGTH' => ($animated ? max(1, (int) ($options['max_frames'] ?? 100)) : 1) + 1,
+            'RESOURCETYPE_WIDTH' => (int) $options['max_width'],
+            'RESOURCETYPE_HEIGHT' => (int) $options['max_height'],
+        ] as $name => $value) {
+            if (defined('Imagick::'.$name)) {
+                $type = constant('Imagick::'.$name);
+                $limits[$type] = \Imagick::getResourceLimit($type);
+                \Imagick::setResourceLimit($type, $value);
+            }
         }
 
         try {
             $native = new \Imagick();
             $native->readImage($coder.':'.$ctx->path().($animated ? '' : '[0]'));
         } finally {
-            if ($limit !== null) {
-                \Imagick::setResourceLimit($limit, $previous);
+            foreach ($limits as $type => $previous) {
+                \Imagick::setResourceLimit($type, $previous);
             }
         }
 

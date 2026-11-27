@@ -37,6 +37,8 @@ final class UploadBuilder
 
     private bool $pending = false;
 
+    private ?string $subdirectory = null;
+
     /** @var array<string, mixed> */
     private array $context = [];
 
@@ -94,6 +96,38 @@ final class UploadBuilder
     public function pending(bool $pending = true): self
     {
         $this->pending = $pending;
+
+        return $this;
+    }
+
+    /**
+     * Store inside a sub directory of the profile directory, e.g. a folder the
+     * user opened in a media browser: {directory}/{subdirectory}/{date}/{id}.{ext}.
+     * Hooks then cannot move the file outside {directory}/{subdirectory}.
+     *
+     * Each segment must match [A-Za-z0-9_-]; "", ".", "..", absolute paths and
+     * backslashes are rejected. An empty string means the profile directory itself.
+     *
+     * @throws Exceptions\RejectedUploadException reason invalid_directory
+     */
+    public function subdirectory(string $path): self
+    {
+        if ($path === '') {
+            $this->subdirectory = null;
+
+            return $this;
+        }
+
+        foreach (explode('/', $path) as $segment) {
+            if (! preg_match('/^[A-Za-z0-9_\-]+$/', $segment)) {
+                throw Exceptions\RejectedUploadException::because(
+                    Exceptions\RejectedUploadException::INVALID_DIRECTORY,
+                    'The sub directory may only contain letters, digits, "-" and "_" separated by "/".',
+                );
+            }
+        }
+
+        $this->subdirectory = $path;
 
         return $this;
     }
@@ -216,6 +250,7 @@ final class UploadBuilder
 
         $job = new ProcessQuarantinedUpload(
             $id, $this->profile->name, $disk, $path, $originalName, $hooks, $this->context, $this->owner, $this->pending,
+            $this->subdirectory,
         );
 
         // Fail before anything is written if the job payload cannot be queued.
@@ -250,6 +285,7 @@ final class UploadBuilder
         $ctx = $this->uploader->processor()->makeContext($this->profile, $file, $originalName, $this->context);
         $ctx->setOwner($this->owner);
         $ctx->setPending($this->pending);
+        $ctx->setSubdirectory($this->subdirectory);
 
         return $ctx;
     }

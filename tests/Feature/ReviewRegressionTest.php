@@ -67,6 +67,7 @@ it('keeps shared deduplicated files when an after_store hook fails', function ()
 });
 
 it('refuses to overwrite a hook chosen name', function () {
+    config()->set('media-upload.managed_directories', ['covers']);
     $named = fn () => MediaUpload::profile('image')
         ->hook('before_store', function (UploadContext $ctx, Closure $next) {
             $ctx->directory = 'covers';

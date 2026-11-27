@@ -19,6 +19,7 @@ use CodePulse2020\MediaUpload\Support\TokenSigner;
 use CodePulse2020\MediaUpload\Support\ServePolicy;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Filesystem\AwsS3V3Adapter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Middleware\ValidateSignature;
@@ -233,7 +234,7 @@ final class MediaUploader
             return $file;
         }
 
-        if ($file->isPending() && $filesystem->disk($file->pendingTarget['disk'])->exists($file->pendingTarget['path'])) {
+        if ($file->isPending() && $this->holdsContent($filesystem->disk($file->pendingTarget['disk']), $file->pendingTarget['path'], $file->sha256)) {
             return $this->claimedVersion($file);
         }
 
@@ -352,8 +353,10 @@ final class MediaUploader
         $final = $this->claimedVersion($file);
 
         if (! $source->exists($file->path)) {
-            if ($targetDisk->exists($final->path)) {
-                return $final; // already claimed
+            // Already claimed only if the target holds this upload's bytes; another
+            // upload may have taken the same name since this source disappeared.
+            if ($this->holdsContent($targetDisk, $final->path, $file->sha256)) {
+                return $final;
             }
 
             throw new InvalidUploadTokenException(InvalidUploadTokenException::MISSING);
@@ -400,6 +403,29 @@ final class MediaUploader
         $source->delete($file->path);
 
         return $final;
+    }
+
+    /** Whether $path exists on $disk with exactly the given SHA-256. */
+    private function holdsContent(Filesystem $disk, string $path, string $sha256): bool
+    {
+        if (! $disk->exists($path)) {
+            return false;
+        }
+
+        $stream = $disk->readStream($path);
+
+        if (! is_resource($stream)) {
+            return false;
+        }
+
+        try {
+            $hash = hash_init('sha256');
+            hash_update_stream($hash, $stream);
+
+            return hash_equals($sha256, hash_final($hash));
+        } finally {
+            fclose($stream);
+        }
     }
 
     private function isPublicPath(string $path): bool

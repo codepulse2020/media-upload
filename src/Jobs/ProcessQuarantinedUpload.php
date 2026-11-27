@@ -50,6 +50,7 @@ final class ProcessQuarantinedUpload implements ShouldQueue
         public readonly array $context,
         public readonly string|int|null $owner = null,
         public readonly bool $pending = false,
+        public readonly ?string $subdirectory = null,
     ) {
     }
 
@@ -81,6 +82,7 @@ final class ProcessQuarantinedUpload implements ShouldQueue
             $ctx = $processor->makeContext($profile, new File($temp), $this->originalName, $this->context);
             $ctx->setOwner($this->owner);
             $ctx->setPending($this->pending);
+            $ctx->setSubdirectory($this->subdirectory);
 
             try {
                 $stored = $processor->run($ctx, $this->hooks);

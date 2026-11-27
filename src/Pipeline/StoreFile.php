@@ -17,7 +17,10 @@ use Illuminate\Support\Str;
 /** @internal */
 final class StoreFile
 {
-    /** @param array<string, mixed> $diskConfigs config('filesystems.disks') */
+    /**
+     * @param  array<string, mixed>  $diskConfigs  config('filesystems.disks')
+     * @param  list<string>  $managedDirectories  config('media-upload.managed_directories')
+     */
     public function __construct(
         private readonly FilesystemFactory $filesystem,
         private readonly array $diskConfigs,
@@ -26,6 +29,7 @@ final class StoreFile
         private readonly string $generator = 'ulid',
         private readonly ?string $publicCacheControl = null,
         private readonly int $lockWait = 10,
+        private readonly array $managedDirectories = [],
     ) {
     }
 
@@ -136,14 +140,17 @@ final class StoreFile
             owner: $ctx->owner(),
         );
 
-        $ctx->setStored($stored, $created);
+        // A content-addressed object can be shared by uploads that deduplicate onto it
+        // once the lock is released, so it is never this upload's to roll back.
+        $ctx->setStored($stored, $created && ! $dedupe);
 
         return $stored;
     }
 
     private function directory(UploadContext $ctx): string
     {
-        $directory = $ctx->directory ?? $ctx->profile->directory.'/'.date('Y/m');
+        $base = $this->baseDirectory($ctx);
+        $directory = $ctx->directory ?? $base.'/'.$ctx->profile->dateSubdirectory();
         $directory = trim(str_replace('\\', '/', $directory), '/');
 
         foreach (explode('/', $directory) as $segment) {
@@ -153,18 +160,68 @@ final class StoreFile
             }
         }
 
-        // Hooks cannot move a public upload out of the public prefix, or a private one into it.
-        if ($ctx->directory !== null && ! $this->insideProfileArea($ctx, $directory)) {
+        if ($ctx->directory !== null) {
+            // Hooks cannot move a public upload out of the public prefix, or a private one into it,
+            // and may only write where MediaUpload::delete() can remove the file again.
+            if (! $this->insideProfileArea($ctx, $directory) || ! $this->allowedForHook($ctx, $base, $directory)) {
+                throw new InvalidConfigException("Directory [{$directory}] is outside the area allowed for profile [{$ctx->profile->name}].");
+            }
+        } elseif (! $this->insideProfileArea($ctx, $directory)) {
+            // A caller sub directory (e.g. "public" under a profile directory that is an
+            // ancestor of the public prefix) must not cross the public/private line either.
+            if ($ctx->subdirectory() !== null) {
+                throw Rejected::because(Rejected::INVALID_DIRECTORY, 'This folder cannot be used for this upload.');
+            }
+
             throw new InvalidConfigException("Directory [{$directory}] is outside the area allowed for profile [{$ctx->profile->name}].");
         }
 
         return $directory;
     }
 
+    /** Profile directory, plus the caller's sub directory when one was given. */
+    private function baseDirectory(UploadContext $ctx): string
+    {
+        $subdirectory = $ctx->subdirectory();
+
+        return $subdirectory === null ? $ctx->profile->directory : $ctx->profile->directory.'/'.$subdirectory;
+    }
+
+    /**
+     * With a sub directory: only inside {directory}/{subdirectory}. Without one:
+     * the profile directory, managed_directories, or (public profiles) the public prefix.
+     */
+    private function allowedForHook(UploadContext $ctx, string $base, string $directory): bool
+    {
+        $roots = [$base];
+
+        if ($ctx->subdirectory() === null) {
+            array_push($roots, ...array_map(fn ($root) => trim((string) $root, '/'), $this->managedDirectories));
+
+            if ($ctx->profile->isPublic()) {
+                $roots[] = $this->serve->publicDirectory();
+            }
+        }
+
+        foreach (array_filter($roots) as $root) {
+            if ($directory === $root || str_starts_with($directory, $root.'/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function insideProfileArea(UploadContext $ctx, string $directory): bool
     {
         $public = $this->serve->publicDirectory();
-        $inPublic = $public !== '' && ($directory === $public || str_starts_with($directory, $public.'/'));
+
+        // Without a public prefix there is no boundary to enforce on the path.
+        if ($public === '') {
+            return true;
+        }
+
+        $inPublic = $directory === $public || str_starts_with($directory, $public.'/');
 
         return $ctx->profile->isPublic() ? $inPublic : ! $inPublic;
     }
@@ -175,6 +232,12 @@ final class StoreFile
             // Hooks may choose the name but never the extension.
             if (! preg_match('/^[A-Za-z0-9_\-]{1,150}$/', $ctx->filename)) {
                 throw new InvalidConfigException("Invalid upload file name [{$ctx->filename}]. Use [A-Za-z0-9_-] without extension.");
+            }
+
+            // With content-addressed names, a hook could otherwise occupy the slot of
+            // content it does not hold, and later uploads would deduplicate onto it.
+            if ($this->generator === 'hash' && preg_match('/^[0-9a-f]{64}$/i', $ctx->filename)) {
+                throw new InvalidConfigException("Invalid upload file name [{$ctx->filename}]. Names that look like a SHA-256 are reserved for content-addressed files.");
             }
 
             return $ctx->filename;

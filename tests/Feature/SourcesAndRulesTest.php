@@ -1,5 +1,6 @@
 <?php
 
+use CodePulse2020\MediaUpload\Exceptions\InvalidConfigException;
 use CodePulse2020\MediaUpload\Exceptions\RejectedUploadException;
 use CodePulse2020\MediaUpload\Facades\MediaUpload;
 use CodePulse2020\MediaUpload\Tests\Fixtures;
@@ -25,6 +26,69 @@ it('exposes read-only profile rules', function () {
     expect(MediaUpload::rules('document')->imagesOnly)->toBeFalse()
         ->and(MediaUpload::rules('document')->maxWidth)->toBeNull();
 });
+
+it('exposes the resolved disk and root directory of a profile', function () {
+    config()->set('filesystems.disks.media', ['driver' => 'local', 'root' => storage_path('app/media')]);
+    Storage::fake('media');
+    config()->set('media-upload.profiles.hero', [
+        'mimes' => ['image/jpeg'], 'max_size' => 1024, 'disk' => 'media', 'directory' => 'site/hero',
+    ]);
+    config()->set('media-upload.profiles.banner', [
+        'mimes' => ['image/jpeg'], 'max_size' => 1024, 'visibility' => 'public', 'directory' => 'media',
+    ]);
+
+    expect(MediaUpload::rules('avatar'))
+        ->disk->toBe('local')
+        ->directory->toBe('uploads/avatar');
+    expect(MediaUpload::rules('public_image')->directory)->toBe('public/uploads/public_image');
+    expect(MediaUpload::rules('banner')->directory)->toBe('public/media');
+
+    $rules = MediaUpload::rules('hero');
+    $stored = MediaUpload::profile('hero')->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+
+    expect($rules->disk)->toBe('media')
+        ->and($rules->directory)->toBe('site/hero')
+        ->and($stored->disk)->toBe($rules->disk)
+        ->and($stored->path)->toStartWith($rules->directory.'/'.date('Y/m').'/')
+        ->and(Storage::disk('media')->exists($stored->path))->toBeTrue();
+
+    config()->set('media-upload.public.disk', 'media');
+    expect(MediaUpload::rules('banner')->disk)->toBe('media');
+});
+
+it('lets profiles change or drop the date sub directory', function () {
+    config()->set('media-upload.profiles.flat', ['mimes' => ['image/jpeg'], 'max_size' => 1024, 'date_directory' => null]);
+    config()->set('media-upload.profiles.daily', ['mimes' => ['image/jpeg'], 'max_size' => 1024, 'date_directory' => 'Y/m/d']);
+
+    $flat = MediaUpload::profile('flat')->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+    $daily = MediaUpload::profile('daily')->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'));
+
+    expect($flat->path)->toMatch('#^uploads/flat/[0-9a-z]{26}\.jpg$#')
+        ->and(MediaUpload::rules('flat')->dateDirectory)->toBeNull()
+        ->and($daily->path)->toStartWith('uploads/daily/'.date('Y/m/d').'/')
+        ->and(MediaUpload::rules('daily')->dateDirectory)->toBe('Y/m/d')
+        ->and(MediaUpload::rules('avatar')->dateDirectory)->toBe('Y/m');
+
+    config()->set('media-upload.date_directory', '');
+    expect(MediaUpload::profile('avatar')->store(Fixtures::upload(Fixtures::jpeg(), 'a.jpg'))->path)
+        ->toMatch('#^uploads/avatar/[0-9a-z]{26}\.webp$#');
+});
+
+it('rejects date_directory formats that could produce unsafe path segments', function (mixed $format) {
+    config()->set('media-upload.profiles.bad', ['mimes' => ['image/jpeg'], 'max_size' => 1024, 'date_directory' => $format]);
+
+    MediaUpload::rules('bad');
+})->with([
+    'parent segment' => ['../Y'],
+    'leading slash' => ['/Y/m'],
+    'empty segment' => ['Y//m'],
+    'trailing slash' => ['Y/m/'],
+    'escaped literal' => ['\\.\\.'],
+    'iso 8601 (colons)' => ['c'],
+    'timezone (may contain /)' => ['e'],
+    'month name' => ['F'],
+    'not a string' => [['Y']],
+])->throws(InvalidConfigException::class);
 
 it('stores remote temporary uploads through readStream()', function () {
     Storage::disk('local')->put('livewire-tmp/abc', Fixtures::jpegWithExif('SECRET-GPS'));

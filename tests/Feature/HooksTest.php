@@ -105,6 +105,8 @@ it('treats a hook that does not call $next as a rejection', function (string $po
 })->with(['validated', 'transform', 'before_store', 'after_store']);
 
 it('lets before_store hooks choose directory, file name and meta', function () {
+    config()->set('media-upload.managed_directories', ['shops']);
+
     $stored = MediaUpload::profile('image')
         ->hook('before_store', function (UploadContext $ctx, Closure $next) {
             $ctx->directory = 'shops/'.$ctx->context['shop_id'];

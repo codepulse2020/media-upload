@@ -15,6 +15,11 @@ final class UploadRules
     /**
      * @param  list<string>  $mimes  real MIME types accepted
      * @param  list<string>  $extensions  client extensions accepted
+     * @param  string  $disk  disk the profile writes to (profile.disk, then public.disk for public profiles, then disk)
+     * @param  string  $directory  root directory of the profile, without the {year}/{month} part;
+     *                             includes the public prefix for public profiles (e.g. "public/media")
+     * @param  ?string  $dateDirectory  date() format of the sub directory added under $directory
+     *                                  (e.g. "Y/m"), null when files go directly into $directory
      */
     public function __construct(
         public readonly string $profile,
@@ -26,6 +31,9 @@ final class UploadRules
         public readonly string $visibility,
         public readonly string $disposition,
         public readonly bool $imagesOnly,
+        public readonly string $disk = 'local',
+        public readonly string $directory = '',
+        public readonly ?string $dateDirectory = 'Y/m',
     ) {
     }
 
@@ -44,6 +52,9 @@ final class UploadRules
             visibility: $profile->visibility,
             disposition: $profile->disposition,
             imagesOnly: $imagesOnly,
+            disk: $profile->disk,
+            directory: $profile->directory,
+            dateDirectory: $profile->dateDirectory,
         );
     }
 

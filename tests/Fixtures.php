@@ -103,6 +103,46 @@ final class Fixtures
         return substr($jpeg, 0, 2).$segment.substr($jpeg, 2);
     }
 
+    /** @return array{0: string, 1: string} GIF89a header (with colour table) and one frame block */
+    private static function gifParts(int $width, int $height): array
+    {
+        $single = self::gif($width, $height);
+        $flags = ord($single[10]);
+        $headerLength = 13 + (($flags & 0x80) ? 3 * (2 ** (($flags & 0x07) + 1)) : 0);
+
+        return ['GIF89a'.substr($single, 6, $headerLength - 6), substr($single, $headerLength, -1)];
+    }
+
+    /**
+     * Animated GIF whose first graphic control extension declares block size 10
+     * (decoders read a fixed 4-byte body), followed by a comment crafted so a
+     * sub-block walk loses sync and under-counts the frames.
+     */
+    public static function gifWithDesyncedExtension(int $frames, int $width = 20, int $height = 20): string
+    {
+        [$header, $frame] = self::gifParts($width, $height);
+        $delay = "\x21\xF9\x04\x00\x0A\x00\x00\x00";
+
+        return $header."\x21\xF9\x0A\x00\x0A\x00\x00\x00"."\x21\xFE\x04AB\x00\x01\x00"
+            .$frame.str_repeat($delay.$frame, $frames - 1).';';
+    }
+
+    /** Animated GIF with a stray byte between frames (ImageMagick skips it). */
+    public static function gifWithJunkByte(int $frames, int $width = 20, int $height = 20): string
+    {
+        [$header, $frame] = self::gifParts($width, $height);
+
+        return $header.$frame."\x00".str_repeat($frame, $frames - 1).';';
+    }
+
+    /** GIF whose logical screen (what getimagesize() reports) is smaller than its frame. */
+    public static function gifWithOversizedFrame(int $width, int $height, int $screen = 10): string
+    {
+        [$header, $frame] = self::gifParts($width, $height);
+
+        return substr($header, 0, 6).pack('vv', $screen, $screen).substr($header, 10).$frame.';';
+    }
+
     /** Valid GIF with a PHP payload appended after the trailer. */
     public static function gifPolyglot(): string
     {
@@ -226,7 +266,9 @@ final class Fixtures
         }
 
         $zip->addFromString(ltrim($part, '/'), '<?xml version="1.0"?><root/>');
-        $zip->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>');
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="'.ltrim($part, '/').'"/>'
+            .'</Relationships>');
 
         if ($contentTypesLast) {
             $zip->addFromString('[Content_Types].xml', $contentTypes);

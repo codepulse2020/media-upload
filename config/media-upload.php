@@ -27,12 +27,18 @@ return [
     | 儲存目錄
     |--------------------------------------------------------------------------
     |
-    | 檔案在 disk 上的根目錄。實際路徑為 {directory}/{profile}/{年}/{月}/
+    | 檔案在 disk 上的根目錄。實際路徑為 {directory}/{profile}/{日期目錄}/
     | {ulid}.{副檔名}，檔名一律由伺服器產生，絕不使用使用者提供的檔名。
+    |
+    | date_directory 為日期子目錄的 date() 格式，預設 Y/m（例如 2026/11）。
+    | 只接受數字型的日期字元（Y y o m n d j z W N w H G），以 / - _ 分隔；
+    | 設為 null 或空字串則直接放在根目錄下。profile 可個別覆寫。
     |
     */
 
     'directory' => 'uploads',
+
+    'date_directory' => 'Y/m',
 
     /*
     |--------------------------------------------------------------------------
@@ -53,7 +59,7 @@ return [
     | 每個 profile 是一組上傳規則，透過 MediaUpload::profile('avatar') 使用。
     | 必填的鍵為 mimes（允許的真實 MIME）與 max_size（單位 KB）。
     |
-    | 選填的鍵有 disk、directory、disposition（inline 或 attachment）、
+    | 選填的鍵有 disk、directory、date_directory、disposition（inline 或 attachment）、
     | image（覆寫下方的全域圖片設定）、office（覆寫 Office 設定）、
     | visibility 以及 hooks（插入業務邏輯）。未設定的鍵會沿用全域設定。
     | image.resize 的 mode 可為 cover 或 contain。
@@ -386,7 +392,8 @@ return [
     |
     | generator 決定儲存檔名的產生方式，可為 ulid、uuid 或 hash（內容的
     | SHA-256）。使用 hash 時相同內容會共用同一個檔案（去重），而且這類
-    | 共用檔案在 after_store hook 失敗時不會被刪除。max_original_length 為
+    | 共用檔案在 after_store hook 失敗時不會被刪除；hook 也不能指定 SHA-256
+    | 形式（64 位十六進位）的檔名。max_original_length 為
     | 原始檔名清理後保留的最大長度，只會放進回傳結果，不會用於儲存。
     |
     */
@@ -455,8 +462,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | MediaUpload::delete() 只會刪除套件管理的目錄（各 profile 目錄、公開、
-    | 待認領與隔離區目錄）。若 before_store hook 把檔案放到其他目錄，需要
-    | 列在這裡才能刪除。
+    | 待認領與隔離區目錄）。before_store hook 要把檔案放到 profile 目錄以外
+    | （例如 shops/1），該目錄必須列在這裡，否則儲存時就會拒絕，確保存得
+    | 進去的檔案一定刪得掉。使用 subdirectory() 時不適用，hook 只能留在
+    | 該子目錄內。
     |
     */
 

@@ -63,7 +63,7 @@ $user->update(['avatar_disk' => $file->disk, 'avatar_path' => $file->path]);
 // 單次加入業務邏輯
 $file = MediaUpload::profile('product')
     ->transform(new Watermark(text: $shop->name, font: resource_path('fonts/Inter.ttf'), position: 'center', opacity: 30))
-    ->hook('before_store', new PutUnderShopDirectory($shop))
+    ->hook('before_store', new PutUnderShopDirectory($shop))   // 目錄需列在 managed_directories
     ->withContext(['shop_id' => $shop->id])
     ->store($request->file('photo'));
 
@@ -104,9 +104,36 @@ $files = array_map(fn ($t) => MediaUpload::claim($t, 'contact', $member->id), $r
 - **重複認領**：`claim()` 可以重複呼叫，會回傳同一個結果。認領前檔案一律放在私有 disk；未認領的檔案由 `media-upload:prune` 清除，正式站使用 S3 時建議改用 lifecycle rule 清除 `pending/`。
 - **不用待認領區**：一般上傳也能用 `$file->token()` 搭配 `MediaUpload::fromToken()`，取代「檢查路徑是否存在」的做法。
 
+## 儲存位置
+
+路徑為 `{directory}/{日期目錄}/{ulid}.{副檔名}`。`directory` 預設是 `uploads/{profile}`，public profile 會再加上 `public/` 前綴。日期目錄由 `date_directory` 決定，預設 `Y/m`（例如 `2026/11`），可以全域設定，也能在 profile 個別覆寫：
+
+```php
+'profiles' => [
+    'hero-images' => ['directory' => 'site/hero', 'date_directory' => null],   // site/hero/{ulid}.jpg
+    'invoice'     => ['date_directory' => 'Y/m/d'],                            // uploads/invoice/2026/11/27/{ulid}.pdf
+],
+```
+
+`date_directory` 只接受數字型日期字元（`Y y o m n d j z W N w H G`），以 `/`、`-`、`_` 分隔。不分日期時檔名仍是 ULID、不會重複，但同一目錄的檔案會持續累積，local disk 上數量很大時列目錄會變慢。`MediaUpload::rules()` 的 `disk`、`directory`、`dateDirectory` 會回傳解析後的值。
+
+**子目錄**：`->subdirectory()` 可以放到 profile 目錄底下的子資料夾（例如媒體庫裡目前打開的資料夾），路徑變成 `{directory}/{subdirectory}/{日期目錄}/{ulid}.{副檔名}`：
+
+```php
+MediaUpload::profile('hero-images')->subdirectory('events/2026')->store($file);
+```
+
+每一段只能是 `[A-Za-z0-9_-]`，`..`、`.`、開頭或結尾的 `/`、空段與反斜線一律拒絕，丟出 `RejectedUploadException`（reason 為 `invalid_directory`，預設轉成 422）。private profile 的子目錄若落入 public 前綴（例如 profile 目錄是 public 前綴的上層）同樣以 `invalid_directory` 拒絕。空字串代表 profile 目錄本身。`storeAsync()` 與 `->pending()` 也會帶著子目錄。
+
+**hook 能改到哪裡**：`before_store` 設定的 `$ctx->directory` 必須落在 `delete()` 刪得掉的範圍，否則在儲存時就丟出 `InvalidConfigException`：
+
+- 有設 `subdirectory()`：只能在 `{directory}/{subdirectory}` 底下
+- 沒有設：profile 目錄、`managed_directories` 列出的目錄，或（public profile）`public/` 底下
+- private 檔案仍然不能進 `public/`，public 檔案也不能離開 `public/`
+
 ## 其他 API
 
-- **`MediaUpload::rules('avatar')`**：回傳唯讀的 `UploadRules`（允許的類型、副檔名、大小與尺寸上限），可用來設定表單元件。
+- **`MediaUpload::rules('avatar')`**：回傳唯讀的 `UploadRules`（允許的類型、副檔名、大小與尺寸上限，以及解析後的 `disk` 與根目錄 `directory`），可用來設定表單元件或決定媒體庫的瀏覽位置。
 - **`->storeFromStream($stream, $name)`、`->storeFromDisk($disk, $path)`**：讓串流或其他 disk 上的檔案經過同一套安全流程。遠端檔案（例如放在 S3 的 Livewire 暫存檔）會先複製到本機，超過大小上限就立即中止。
 - **`MediaUpload::delete($file)`**：只刪除套件管理的目錄（profile、公開、待認領、隔離區，以及 `managed_directories` 列出的目錄），任意路徑一律拒絕。hash 去重的檔案需要加上 `force: true`。
 
@@ -181,7 +208,7 @@ Imagick 相關測試只在安裝了 `ext-imagick` 時執行（CI 會安裝），
 - **下載檔名**：使用原始檔名，但副檔名換成實際儲存的格式（`photo.jpg` 轉成 WebP 後下載為 `photo.webp`）。
 - **profile 設為 `disposition: attachment`**：不論 proxy 或 presigned 都以下載方式回應，這個設定寫在簽章裡，無法從網址移除。
 - **快取**：瀏覽器快取時間不會超過網址剩餘的有效時間，設定 `serve.cache = false` 則完全不快取。
-- **`filename.generator = hash`**：相同內容共用同一個檔案；hook 指定的檔名若已存在，回傳 `path_conflict`，不會覆蓋。可預期的檔名會用 cache lock 避免同時寫入（需要支援 lock 的 cache store）。
+- **`filename.generator = hash`**：相同內容共用同一個檔案；hook 指定的檔名若已存在，回傳 `path_conflict`，不會覆蓋。hook 不能指定 64 位十六進位（SHA-256 形式）的檔名，這些名稱保留給內容定址檔案；共用檔案也不會因 `after_store` 失敗而被刪除。可預期的檔名會用 cache lock 避免同時寫入（需要支援 lock 的 cache store）。
 - **動畫**：解碼前先解析 GIF/WebP 結構計算影格數；Imagick 另外設定 ImageMagick 的 list-length 上限，並以明確的 coder 讀取（例如 `gif:`），避免 ImageMagick 依內容改用其他 coder。
 - **Queue**：同一個上傳 id 的 job 可重複執行而不會重複儲存；掃毒服務暫時無法連線時會先重試；只有事件送出失敗時，不會再發出 `UploadRejected`。
 - **掃毒大小上限**：超過 `virus_scan.clamav.max_size` 的檔案一律拒絕（`too_large_to_scan`），不受 `fail_closed` 影響。

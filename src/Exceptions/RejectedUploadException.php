@@ -36,6 +36,7 @@ class RejectedUploadException extends RuntimeException
     public const PROCESSING_FAILED = 'processing_failed';
     public const PATH_CONFLICT = 'path_conflict';
     public const TOO_LARGE_TO_SCAN = 'too_large_to_scan';
+    public const INVALID_DIRECTORY = 'invalid_directory';
 
     public function __construct(
         public readonly string $reason,

@@ -31,7 +31,14 @@ final class Profile
         public readonly array $office = [],
         public readonly string $pendingDisk = 'local',
         public readonly string $pendingDirectory = 'pending',
+        public readonly ?string $dateDirectory = 'Y/m',
     ) {
+    }
+
+    /** Sub directory under $directory for a new upload, e.g. "2026/11"; "" when disabled. */
+    public function dateSubdirectory(?int $timestamp = null): string
+    {
+        return $this->dateDirectory === null ? '' : date($this->dateDirectory, $timestamp ?? time());
     }
 
     public function isPublic(): bool
@@ -125,7 +132,28 @@ final class Profile
             // Pending uploads always wait on the private disk, even for public profiles.
             pendingDisk: $config['disk'] ?? 'local',
             pendingDirectory: trim(($config['pending']['directory'] ?? 'pending').'/'.$name, '/'),
+            dateDirectory: self::dateDirectory(
+                $name,
+                array_key_exists('date_directory', $profile) ? $profile['date_directory'] : ($config['date_directory'] ?? 'Y/m'),
+            ),
         );
+    }
+
+    /**
+     * Only numeric date characters (so every segment stays a plain name),
+     * separated by "/", "-" or "_". null or "" turns the date layer off.
+     */
+    private static function dateDirectory(string $name, mixed $format): ?string
+    {
+        if ($format === null || $format === '') {
+            return null;
+        }
+
+        if (! is_string($format) || ! preg_match('#^[YyomndjzWNwHG]+(?:[-_]*[YyomndjzWNwHG]+)*(?:/[YyomndjzWNwHG]+(?:[-_]*[YyomndjzWNwHG]+)*)*$#', $format)) {
+            throw new InvalidConfigException("Profile [{$name}] date_directory must be a date() format using only Y y o m n d j z W N w H G, separated by \"/\", \"-\" or \"_\".");
+        }
+
+        return $format;
     }
 
     /**

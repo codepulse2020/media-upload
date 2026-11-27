@@ -131,6 +131,7 @@ it('reuses identical content when claiming with the hash generator', function ()
 });
 
 it('refuses to claim onto an existing hook chosen name', function () {
+    config()->set('media-upload.managed_directories', ['covers']);
     $named = fn () => MediaUpload::profile('image')->pending()
         ->hook('before_store', function (UploadContext $ctx, Closure $next) {
             $ctx->directory = 'covers';
@@ -148,6 +149,7 @@ it('refuses to claim onto an existing hook chosen name', function () {
 });
 
 it('locks the claim target, not the pending source', function () {
+    config()->set('media-upload.managed_directories', ['covers']);
     config()->set('media-upload.locks.wait', 0);
 
     $pending = MediaUpload::profile('image')->pending()

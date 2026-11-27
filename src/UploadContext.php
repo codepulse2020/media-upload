@@ -46,6 +46,8 @@ final class UploadContext
 
     private string|int|null $owner = null;
 
+    private ?string $subdirectory = null;
+
     /**
      * @param  string  $originalName  sanitised and length-limited, for display / StoredFile
      * @param  array<string, mixed>  $context  data passed by the caller, e.g. ['user_id' => 1]
@@ -216,6 +218,25 @@ final class UploadContext
     public function setOwner(string|int|null $owner): void
     {
         $this->owner = $owner;
+    }
+
+    /**
+     * Sub directory inside the profile directory chosen by the caller
+     * (UploadBuilder::subdirectory()), or null. Hooks cannot change it.
+     */
+    public function subdirectory(): ?string
+    {
+        return $this->subdirectory;
+    }
+
+    /** @internal set once by the builder or the queue job */
+    public function setSubdirectory(?string $subdirectory): void
+    {
+        if ($this->subdirectory !== null) {
+            throw new \LogicException('The upload sub directory is already set.');
+        }
+
+        $this->subdirectory = $subdirectory;
     }
 
     /** @internal */
